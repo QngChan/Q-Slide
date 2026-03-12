@@ -9,6 +9,7 @@ import threading
 import time
 import webbrowser
 import importlib.util
+import logging
 from pathlib import Path
 from urllib import error, request
 
@@ -22,6 +23,30 @@ except ModuleNotFoundError:
 
 HOST = "127.0.0.1"
 DEFAULT_PORT = 8100
+LOG_PATH: Path | None = None
+
+
+def setup_logging() -> None:
+    global LOG_PATH
+    if getattr(sys, "frozen", False):
+        try:
+            LOG_PATH = Path(sys.argv[0]).with_suffix(".log")
+            logging.basicConfig(
+                filename=str(LOG_PATH),
+                level=logging.INFO,
+                format="%(asctime)s %(levelname)s %(message)s",
+            )
+            logging.info("Q-Slidee started (frozen exe).")
+        except Exception:
+            # If logging fails, continue without blocking startup.
+            LOG_PATH = None
+
+
+def log_exception(context: str, exc: BaseException) -> None:
+    try:
+        logging.exception("%s: %s", context, exc)
+    except Exception:
+        pass
 
 
 def safe_print(*args, **kwargs) -> None:
@@ -47,7 +72,17 @@ def find_available_port(start_port: int = DEFAULT_PORT, max_tries: int = 30) -> 
 
 def run_server(port: int) -> None:
     ws_mode = "auto" if has_websocket_backend() else "none"
-    uvicorn.run(server_app, host=HOST, port=port, log_level="warning", ws=ws_mode)
+    try:
+        uvicorn.run(
+            server_app,
+            host=HOST,
+            port=port,
+            log_level="warning",
+            ws=ws_mode,
+            log_config=None,  # Avoid uvicorn default formatter relying on sys.stdout.isatty() in frozen EXE.
+        )
+    except Exception as exc:
+        log_exception("Uvicorn failed to start", exc)
 
 
 def has_websocket_backend() -> bool:
@@ -105,10 +140,15 @@ def launch_host_window(url: str) -> bool:
 
 
 def main() -> int:
+    setup_logging()
     if not has_websocket_backend():
         safe_print("WebSocket backend bulunamadı. Polling fallback ile devam edilecek.")
+        if LOG_PATH:
+            logging.warning("WebSocket backend bulunamadı. Polling fallback ile devam edilecek.")
 
     port = find_available_port()
+    if LOG_PATH:
+        logging.info("Using port %s", port)
     server_thread = threading.Thread(target=run_server, args=(port,), daemon=True)
     server_thread.start()
 
@@ -118,6 +158,8 @@ def main() -> int:
 
     if not wait_for_server(api_url):
         safe_print("Sunucu başlatılamadı. Lütfen port ve bağımlılıkları kontrol edin.")
+        if LOG_PATH:
+            logging.error("Sunucu başlatılamadı. API yanıt vermedi: %s", api_url)
         return 1
 
     opened = launch_host_window(host_url)
@@ -134,6 +176,9 @@ def main() -> int:
             time.sleep(1)
     except KeyboardInterrupt:
         return 0
+    except Exception as exc:
+        log_exception("Fatal error", exc)
+        return 1
 
 
 if __name__ == "__main__":
