@@ -1,0 +1,950 @@
+﻿<!doctype html>
+<html lang="tr">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Q-Slidee Host</title>
+  <style>
+    :root {
+      --accent: #22d3ee;
+      --accent-2: #38bdf8;
+      --warn: #f59e0b;
+      --ok: #34d399;
+      --danger: #fb7185;
+    }
+
+    body[data-theme="dark"] {
+      --tone-0: #000000;
+      --tone-1: #1c1c1c;
+      --tone-2: #4b4b4b;
+      --tone-3: #7d7d7d;
+      --tone-4: #bfbfbf;
+      --bg0: var(--tone-0);
+      --bg1: var(--tone-1);
+      --bg2: var(--tone-2);
+      --panel: rgba(28, 28, 28, 0.92);
+      --line: rgba(191, 191, 191, 0.24);
+      --text: #f5f5f5;
+      --muted: var(--tone-4);
+      --card-bg: rgba(0, 0, 0, 0.65);
+      --chip-bg: rgba(255, 255, 255, 0.04);
+      --bg-glow-1: rgba(125, 125, 125, 0.18);
+      --bg-glow-2: rgba(75, 75, 75, 0.22);
+      --select-bg: #121212;
+      --select-border: #3a3a3a;
+      --select-text: #e2e8f0;
+    }
+
+    body[data-theme="light"] {
+      --tone-0: #c0c0c0;
+      --tone-1: #d3d3d3;
+      --tone-2: #e0e0e0;
+      --tone-3: #f5f5f5;
+      --tone-4: #ffffff;
+      --bg0: var(--tone-4);
+      --bg1: var(--tone-3);
+      --bg2: var(--tone-2);
+      --panel: rgba(255, 255, 255, 0.94);
+      --line: rgba(0, 0, 0, 0.14);
+      --text: #1c1c1c;
+      --muted: #4b4b4b;
+      --card-bg: rgba(255, 255, 255, 0.9);
+      --chip-bg: rgba(0, 0, 0, 0.03);
+      --bg-glow-1: rgba(192, 192, 192, 0.55);
+      --bg-glow-2: rgba(224, 224, 224, 0.45);
+      --select-bg: #f5f5f5;
+      --select-border: #bdbdbd;
+      --select-text: #1c1c1c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Bahnschrift", "Trebuchet MS", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 10%, var(--bg-glow-1) 0%, transparent 48%),
+        radial-gradient(circle at 86% 92%, var(--bg-glow-2) 0%, transparent 42%),
+        linear-gradient(140deg, var(--bg2), var(--bg0) 58%);
+      padding: 14px;
+    }
+
+    .app {
+      min-height: calc(100vh - 28px);
+      display: grid;
+      grid-template-columns: minmax(420px, 1fr) minmax(380px, 48vw);
+      gap: 12px;
+    }
+
+    .host-shell {
+      display: grid;
+      grid-template-rows: auto auto 1fr auto auto;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel);
+      padding: 12px;
+      backdrop-filter: blur(4px);
+      min-width: 0;
+    }
+
+    .header {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: linear-gradient(140deg, rgba(34, 211, 238, 0.16), rgba(56, 189, 248, 0.06));
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 1.18rem;
+      letter-spacing: 0.2px;
+    }
+
+    .sub {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .group {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--chip-bg);
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .group-title {
+      font-size: 0.85rem;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .upload-row {
+      border: 1px dashed rgba(34, 211, 238, 0.5);
+      border-radius: 10px;
+      background: rgba(34, 211, 238, 0.08);
+      padding: 9px;
+    }
+
+    input[type=file] {
+      color: var(--text);
+      max-width: 100%;
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    .file-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    button {
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.15px;
+      cursor: pointer;
+      transition: transform .08s ease, filter .15s ease, background .2s ease;
+      color: #dbeafe;
+      background: #1e2e4b;
+      border-color: #355180;
+    }
+
+    button:hover {
+      filter: brightness(1.08);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    button:disabled {
+      opacity: .6;
+      cursor: default;
+    }
+
+    .btn-primary {
+      background: linear-gradient(120deg, var(--accent), var(--accent-2));
+      border-color: transparent;
+      color: #022635;
+    }
+
+    .btn-warn {
+      background: #4a3212;
+      border-color: #8c5a1b;
+      color: #fde68a;
+    }
+
+    .btn-danger {
+      background: #4b1923;
+      border-color: #8d2940;
+      color: #fecdd3;
+    }
+
+    .btn-ok {
+      background: #113a33;
+      border-color: #1d7a67;
+      color: #bbf7d0;
+    }
+
+    .media-grid-wrap {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--chip-bg);
+      padding: 10px;
+      display: grid;
+      gap: 10px;
+      min-height: 260px;
+      overflow: auto;
+      align-content: start;
+    }
+
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 10px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--card-bg);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform .08s ease, box-shadow .15s ease, border-color .15s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-1px);
+      border-color: rgba(56, 189, 248, 0.5);
+      box-shadow: 0 8px 18px rgba(2, 10, 24, 0.45);
+    }
+
+    .card.active-main {
+      outline: 2px solid var(--warn);
+    }
+
+    .card.active-bgm {
+      box-shadow: inset 0 0 0 2px #4aa2ff;
+    }
+
+    .thumb {
+      height: 96px;
+      background: var(--tone-1);
+      display: grid;
+      place-items: center;
+      color: #e2e8f0;
+      font-size: 0.76rem;
+    }
+
+    .thumb img,
+    .thumb video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .meta {
+      padding: 7px 8px;
+      font-size: 0.76rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .audio-box {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--chip-bg);
+      padding: 10px;
+      display: grid;
+      gap: 9px;
+    }
+
+    .audio-top {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .audio-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .video-controls {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--chip-bg);
+      padding: 8px;
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    input[type="range"] {
+      width: 220px;
+    }
+
+    .status {
+      border-top: 1px solid var(--line);
+      padding-top: 8px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .preview {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel);
+      padding: 10px;
+      resize: horizontal;
+      overflow: auto;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 8px;
+      min-width: 360px;
+    }
+
+    .preview-head {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--chip-bg);
+      padding: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .preview iframe {
+      width: 100%;
+      height: 100%;
+      min-height: 520px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #000;
+    }
+
+    .preview.collapsed {
+      display: none;
+    }
+
+    @media (max-width: 1200px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .preview {
+        resize: vertical;
+        min-width: 0;
+      }
+
+      .preview iframe {
+        min-height: 380px;
+      }
+
+      .audio-top {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+  <body data-theme="dark">
+    <div class="app">
+      <section class="host-shell">
+        <header class="header">
+          <div>
+            <h1 class="title">Q-Slide Host Kontrol Merkezi</h1>
+          <div class="sub">Sunum medyasi, müzik ve izleyici ekrani buradan yönetilir.</div>
+        </div>
+        <div class="row">
+          <select id="themeSelect"
+            style="padding:8px;border-radius:10px;background:var(--select-bg);color:var(--select-text);border:1px solid var(--select-border);">
+            <option value="dark">Siyah Tema</option>
+            <option value="light">Açık Tema</option>
+          </select>
+          <button id="togglePreview">Ön İzlemeyi Kapat</button>
+          <button id="refresh">Yenile</button>
+        </div>
+      </header>
+
+      <section class="group">
+        <p class="group-title">Sunum Dosyası Ekleme</p>
+        <div class="row upload-row">
+          <input id="files" class="file-input" type="file" multiple
+            accept="image/*,video/*,.pptx,.docx,.xlsx,.xls,.pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/pdf" />
+          <span id="filesLabel" class="file-label">Dosya seçilmedi.</span>
+          <button id="upload" class="btn-primary">Sunum Dosyası Ekle</button>
+        </div>
+      </section>
+
+      <section class="group">
+        <p class="group-title">Sunum (PPTX / DOCX / XLSX / PDF) Senkron Sunum</p>
+        <div id="loInstallPanel"
+          style="display:none; border:1px solid var(--warn); background:rgba(245, 158, 11, 0.1); padding:10px; border-radius:10px; margin-bottom:8px;">
+          <div style="font-size:0.85rem; color:var(--warn); margin-bottom:8px;">
+            Yüksek kaliteli sunum için LibreOffice gerekli. Kurmak ister misiniz? (Arka planda indirilir ve kurulur)
+          </div>
+          <div class="row">
+            <button id="btnInstallLO" class="btn-warn">LibreOffice Kur</button>
+            <span id="loInstallStatus" class="sub" style="display:none;">İndiriliyor ve kuruluyor...</span>
+          </div>
+        </div>
+        <div class="sub">Sunum dosyalarını yukarıdaki birleşik alandan yükleyin.</div>
+        <div class="row">
+          <select id="pptDeckSelect"
+            style="min-width:240px;padding:8px;border-radius:10px;background:var(--select-bg);color:var(--select-text);border:1px solid var(--select-border);"></select>
+          <button id="pptSelect">Sunumu Seç</button>
+          <button id="pptPrev">Önceki Slayt</button>
+          <button id="pptNext" class="btn-warn">Sonraki Slayt</button>
+        </div>
+        <div id="pptInfo" class="sub">Aktif Sunum: Yok</div>
+      </section>
+
+      <section class="media-grid-wrap">
+        <p class="group-title">Sunum Dosyaları</p>
+        <div id="presentationLibrary" class="media-grid"></div>
+      </section>
+
+      <section class="audio-box">
+        <div class="audio-top">
+          <div>
+            <p class="group-title" style="margin-bottom:6px;">Ses Ekleme</p>
+            <div class="row upload-row">
+              <input id="bgmFiles" class="file-input" type="file" accept="audio/*,video/*" multiple />
+              <span id="bgmFilesLabel" class="file-label">Dosya seçilmedi.</span>
+              <button id="uploadBgm" class="btn-primary">Müzik Medyası Ekle</button>
+            </div>
+          </div>
+          <div>
+            <p class="group-title" style="margin-bottom:6px;">Ses Durumu</p>
+            <div id="bgmLabel" class="sub">Seçili Müzik: Yok</div>
+          </div>
+        </div>
+
+        <div>
+          <p class="group-title" style="margin-bottom:6px;">Müzik Dosyaları</p>
+          <div id="musicLibrary" class="media-grid"></div>
+        </div>
+
+        <div>
+          <p class="group-title" style="margin-bottom:6px;">Ses Kontrolleri</p>
+          <div class="audio-controls">
+            <button id="bgmPlay" class="btn-ok">Müzik Play</button>
+            <button id="bgmPause">Müzik Pause</button>
+            <button id="bgmStop" class="btn-danger">Müzik Stop</button>
+            <button id="bgmRestart" class="btn-warn">Müzik Restart</button>
+            <span class="sub">Ses:</span>
+            <input id="bgmVolume" type="range" min="0" max="100" value="70" />
+            <span id="bgmVolumeText" class="sub">70%</span>
+          </div>
+        </div>
+      </section>
+
+      <div id="status" class="status">Durum: Hazır</div>
+    </section>
+
+    <aside id="previewPanel" class="preview">
+      <div class="preview-head">
+        <div>
+          <strong>Ön İzleme</strong>
+          <div class="sub">İzleyici ekraninin canlı görünümü</div>
+        </div>
+      </div>
+
+      <iframe id="previewFrame" src="/" title="Viewer Preview" allow="autoplay; fullscreen"></iframe>
+
+      <div>
+        <p class="group-title" style="margin-bottom:6px;">Video Kontrolleri</p>
+        <div class="video-controls">
+          <button id="videoPlay" class="btn-ok">Video Play</button>
+          <button id="videoPause">Video Pause</button>
+          <button id="videoRestart" class="btn-warn">Video Restart</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const filesEl = document.getElementById("files");
+    const filesLabelEl = document.getElementById("filesLabel");
+    const bgmFilesEl = document.getElementById("bgmFiles");
+    const bgmFilesLabelEl = document.getElementById("bgmFilesLabel");
+    const uploadBtn = document.getElementById("upload");
+    const uploadBgmBtn = document.getElementById("uploadBgm");
+    const refreshBtn = document.getElementById("refresh");
+    const pptDeckSelectEl = document.getElementById("pptDeckSelect");
+    const themeSelectEl = document.getElementById("themeSelect");
+    const pptInfoEl = document.getElementById("pptInfo");
+    const presentationLibraryEl = document.getElementById("presentationLibrary");
+    const musicLibraryEl = document.getElementById("musicLibrary");
+    const statusEl = document.getElementById("status");
+    const bgmLabelEl = document.getElementById("bgmLabel");
+    const bgmVolumeEl = document.getElementById("bgmVolume");
+    const bgmVolumeTextEl = document.getElementById("bgmVolumeText");
+    const previewPanelEl = document.getElementById("previewPanel");
+    const togglePreviewBtn = document.getElementById("togglePreview");
+    const loInstallPanel = document.getElementById("loInstallPanel");
+    const btnInstallLO = document.getElementById("btnInstallLO");
+    const loInstallStatus = document.getElementById("loInstallStatus");
+
+    let mediaItems = [];
+    let currentMainId = null;
+    let currentBgmId = null;
+    let pptState = { decks: [], active_deck_id: null, active_slide_index: null };
+
+    function setStatus(text) {
+      console.log("Status update:", text);
+      statusEl.textContent = `Durum: ${text}`;
+    }
+
+    function mediaNameById(id) {
+      const item = mediaItems.find(x => x.id === id);
+      return item ? item.name : "Yok";
+    }
+
+    function updateBgmLabel() {
+      bgmLabelEl.textContent = `Secili Muzik: ${mediaNameById(currentBgmId)}`;
+    }
+
+    function buildCard(item, mode) {
+      const card = document.createElement("div");
+      card.className = "card";
+      if (item.id === currentMainId) card.classList.add("active-main");
+      if (item.id === currentBgmId) card.classList.add("active-bgm");
+
+      const thumb = document.createElement("div");
+      thumb.className = "thumb";
+      if (item.type === "image") {
+        const img = document.createElement("img");
+        img.src = item.url;
+        img.alt = item.name;
+        thumb.appendChild(img);
+      } else if (item.type === "video") {
+        const vid = document.createElement("video");
+        vid.src = item.url;
+        vid.muted = true;
+        thumb.appendChild(vid);
+      } else {
+        thumb.textContent = "AUDIO";
+      }
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent = `${item.type.toUpperCase()} - ${item.name}`;
+      card.title = mode === "presentation" ? "Tikla ve yansit" : "Tikla ve muzik sec";
+      card.onclick = () => {
+        if (mode === "presentation") showMainMedia(item.id);
+        if (mode === "music") selectBgm(item.id);
+      };
+
+      card.appendChild(thumb);
+      card.appendChild(meta);
+      return card;
+    }
+
+    function buildDeckCard(deck, isActive) {
+      const card = document.createElement("div");
+      card.className = "card";
+      if (isActive) card.classList.add("active-main");
+
+      const thumb = document.createElement("div");
+      thumb.className = "thumb";
+      if (deck.preview_src) {
+        const img = document.createElement("img");
+        img.src = deck.preview_src;
+        img.alt = deck.name || "Sunum";
+        thumb.appendChild(img);
+      } else {
+        thumb.textContent = "SUNUM";
+      }
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent = `SUNUM - ${deck.name} (${deck.slide_count} slayt)`;
+
+      card.title = "Tıkla ve sunumu etkinleştir";
+      card.onclick = () => selectPptDeckById(deck.id);
+
+      card.appendChild(thumb);
+      card.appendChild(meta);
+      return card;
+    }
+
+    function renderLibrary() {
+      presentationLibraryEl.innerHTML = "";
+      musicLibraryEl.innerHTML = "";
+
+      for (const item of mediaItems) {
+        const bucket = item.bucket || (item.type === "audio" ? "music" : "presentation");
+        if (bucket === "presentation") {
+          presentationLibraryEl.appendChild(buildCard(item, "presentation"));
+        }
+        if (bucket === "music") {
+          musicLibraryEl.appendChild(buildCard(item, "music"));
+        }
+      }
+      const decks = pptState.decks || [];
+      const activeDeckId = pptState.active_deck_id || "";
+      for (const deck of decks) {
+        presentationLibraryEl.appendChild(buildDeckCard(deck, deck.id === activeDeckId));
+      }
+      updateBgmLabel();
+    }
+
+    function renderPptState() {
+      const decks = pptState.decks || [];
+      const activeDeckId = pptState.active_deck_id || "";
+      const activeDeck = decks.find(d => d.id === activeDeckId) || null;
+
+      pptDeckSelectEl.innerHTML = "";
+      const defaultOption = document.createElement("option");
+      defaultOption.value = "";
+      defaultOption.textContent = decks.length ? "Sunum secin" : "Yüklü sunum yok";
+      pptDeckSelectEl.appendChild(defaultOption);
+
+      for (const deck of decks) {
+        const opt = document.createElement("option");
+        opt.value = deck.id;
+        opt.textContent = `${deck.name} (${deck.slide_count} slayt)`;
+        if (deck.id === activeDeckId) opt.selected = true;
+        pptDeckSelectEl.appendChild(opt);
+      }
+
+      if (activeDeck) {
+        const slideIndex = Number.isFinite(activeDeck.current_index) ? activeDeck.current_index + 1 : 1;
+        const total = activeDeck.slide_count || 0;
+        pptInfoEl.textContent = `Aktif Sunum: ${activeDeck.name} - Slayt ${slideIndex}/${total}`;
+      } else {
+        pptInfoEl.textContent = "Aktif Sunum: Yok";
+      }
+    }
+
+    async function fetchPpt() {
+      const response = await fetch("/api/ppt");
+      const data = await response.json();
+      pptState = {
+        decks: data.decks || [],
+        active_deck_id: data.active_deck_id || null,
+        active_slide_index: data.active_slide_index ?? null,
+      };
+      renderPptState();
+    }
+
+    async function fetchState() {
+      const response = await fetch("/api/state");
+      const data = await response.json();
+      currentMainId = data.current_media ? data.current_media.id : null;
+      currentBgmId = data.bgm_media ? data.bgm_media.id : null;
+      if (typeof data.bgm_volume === "number") {
+        bgmVolumeEl.value = String(Math.round(data.bgm_volume * 100));
+        bgmVolumeTextEl.textContent = `${bgmVolumeEl.value}%`;
+      }
+    }
+
+    async function fetchMedia() {
+      const response = await fetch("/api/media");
+      const data = await response.json();
+      mediaItems = data.items || [];
+      await fetchState();
+      await fetchPpt();
+      renderLibrary();
+      setStatus(`Toplam medya: ${mediaItems.length}`);
+    }
+
+
+    async function selectPptDeckById(deckId) {
+      const cleanId = (deckId || "").trim();
+      if (!cleanId) {
+        setStatus("Lütfen sunum seçiniz");
+        return;
+      }
+      try {
+        const response = await fetch("/api/ppt/select", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ deck_id: cleanId }),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        await fetchMedia();
+        setStatus("Sunum aktif edildi");
+      } catch (err) {
+        setStatus(`Sunum seçim hatası: ${err.message}`);
+      }
+    }
+
+    async function selectPptDeck() {
+      return selectPptDeckById(pptDeckSelectEl.value || "");
+    }
+
+    async function stepPpt(direction) {
+      const endpoint = direction === "next" ? "/api/ppt/next" : "/api/ppt/prev";
+      try {
+        const response = await fetch(endpoint, { method: "POST" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        await fetchMedia();
+        setStatus(direction === "next" ? "Sonraki slayt" : "Önceki slayt");
+      } catch (err) {
+        setStatus(`Slayt kontrol hatası: ${err.message}`);
+      }
+    }
+
+    async function showMainMedia(id) {
+      try {
+        const response = await fetch("/api/media/show", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ media_id: id }),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        currentMainId = id;
+        renderLibrary();
+        setStatus("Ana ekran medyası güncellendi");
+      } catch (err) {
+        setStatus(`Yansıtma hatası: ${err.message}`);
+      }
+    }
+
+    async function selectBgm(id) {
+      try {
+        const response = await fetch("/api/bgm/set", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ media_id: id }),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        currentBgmId = id;
+        renderLibrary();
+        setStatus("Müzik seçildi");
+      } catch (err) {
+        setStatus(`Müzik seçim hatası: ${err.message}`);
+      }
+    }
+
+    async function sendVideoControl(action) {
+      try {
+        const response = await fetch("/api/video/control", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        setStatus(`Video komutu: ${action}`);
+      } catch (err) {
+        setStatus(`Video kontrol hatası: ${err.message}`);
+      }
+    }
+
+    async function sendBgmControl(action, volume = null) {
+      try {
+        const payload = { action };
+        if (volume !== null) payload.volume = volume;
+        const response = await fetch("/api/bgm/control", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        setStatus(`Müzik komutu: ${action}`);
+      } catch (err) {
+        setStatus(`Müzik kontrol hatası: ${err.message}`);
+      }
+    }
+
+    async function uploadFilesFromInput(inputEl, sourceLabel, bucket) {
+      const files = Array.from(inputEl.files || []);
+      if (!files.length) {
+        setStatus(`Lütfen en az bir dosya seçiniz (${sourceLabel})`);
+        return;
+      }
+
+      uploadBtn.disabled = true;
+      uploadBgmBtn.disabled = true;
+      setStatus(`${sourceLabel} yükleniyor... (${files.length} dosya)`);
+
+      const docExts = [".pptx", ".docx", ".xlsx", ".xls", ".pdf"];
+      const errors = [];
+      let successCount = 0;
+      try {
+        for (const file of files) {
+          const name = (file.name || "").toLowerCase();
+          const dot = name.lastIndexOf(".");
+          const ext = dot >= 0 ? name.slice(dot) : "";
+          const isDoc = docExts.includes(ext);
+
+          if (bucket === "music" && isDoc) {
+            errors.push(`${file.name}: dokümanlar müzik bölümüne yüklenemez`);
+            continue;
+          }
+
+          const endpoint = isDoc
+            ? `/api/ppt/upload?filename=${encodeURIComponent(file.name)}`
+            : `/api/media/upload?filename=${encodeURIComponent(file.name)}&bucket=${encodeURIComponent(bucket)}`;
+
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": file.type || "application/octet-stream",
+              "X-Filename": file.name,
+            },
+            body: file,
+          });
+          if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`${file.name} -> HTTP ${response.status} ${text}`);
+          }
+          successCount += 1;
+        }
+        inputEl.value = "";
+        updateFileLabel(inputEl);
+        await fetchMedia();
+        if (!errors.length) {
+          setStatus(`${sourceLabel} eklendi (${successCount})`);
+        } else {
+          console.error("Yükleme hataları:", errors);
+          setStatus(`${sourceLabel} eklendi (${successCount}), ${errors.length} hata`);
+        }
+      } catch (err) {
+        setStatus(`Yükleme hatası: ${err.message}`);
+      } finally {
+        uploadBtn.disabled = false;
+        uploadBgmBtn.disabled = false;
+      }
+    }
+
+    function updateFileLabel(inputEl) {
+      const count = inputEl.files ? inputEl.files.length : 0;
+      if (inputEl === filesEl) {
+        filesLabelEl.textContent = count ? `${count} dosya seçildi` : "Dosya seçilmedi.";
+      }
+      if (inputEl === bgmFilesEl) {
+        bgmFilesLabelEl.textContent = count ? `${count} dosya seçildi` : "Dosya seçilmedi.";
+      }
+    }
+
+    function bindFilePicker(inputEl, buttonEl, sourceLabel, bucket) {
+      buttonEl.addEventListener("click", () => {
+        inputEl.click();
+      });
+      inputEl.addEventListener("change", () => {
+        updateFileLabel(inputEl);
+        if (inputEl.files && inputEl.files.length) {
+          uploadFilesFromInput(inputEl, sourceLabel, bucket);
+        }
+      });
+    }
+
+    function togglePreviewPanel() {
+      const willClose = !previewPanelEl.classList.contains("collapsed");
+      previewPanelEl.classList.toggle("collapsed", willClose);
+      togglePreviewBtn.textContent = willClose ? "Ön Izlemeyi Aç" : "Ön Izlemeyi Kapat";
+      setStatus(willClose ? "Ön izleme paneli kapatıldı" : "Ön izleme paneli açıldı");
+    }
+
+    function applyTheme(themeKey) {
+      document.body.dataset.theme = themeKey || "dark";
+    }
+
+    bindFilePicker(filesEl, uploadBtn, "Sunum dosyaları", "presentation");
+    bindFilePicker(bgmFilesEl, uploadBgmBtn, "Müzik medyaları", "music");
+    refreshBtn.addEventListener("click", fetchMedia);
+    document.getElementById("pptSelect").addEventListener("click", selectPptDeck);
+    document.getElementById("pptPrev").addEventListener("click", () => stepPpt("prev"));
+    document.getElementById("pptNext").addEventListener("click", () => stepPpt("next"));
+    togglePreviewBtn.addEventListener("click", togglePreviewPanel);
+
+    document.getElementById("videoPlay").addEventListener("click", () => sendVideoControl("play"));
+    document.getElementById("videoPause").addEventListener("click", () => sendVideoControl("pause"));
+    document.getElementById("videoRestart").addEventListener("click", () => sendVideoControl("restart"));
+
+    document.getElementById("bgmPlay").addEventListener("click", () => sendBgmControl("play"));
+    document.getElementById("bgmPause").addEventListener("click", () => sendBgmControl("pause"));
+    document.getElementById("bgmStop").addEventListener("click", () => sendBgmControl("stop"));
+    document.getElementById("bgmRestart").addEventListener("click", () => sendBgmControl("restart"));
+
+    applyTheme("dark");
+    themeSelectEl.value = "dark";
+    themeSelectEl.addEventListener("change", () => applyTheme(themeSelectEl.value));
+
+    bgmVolumeEl.addEventListener("input", () => {
+      const percent = Number(bgmVolumeEl.value || "0");
+      bgmVolumeTextEl.textContent = `${percent}%`;
+      sendBgmControl("volume", percent / 100);
+    });
+
+    async function checkSystemStatus() {
+      try {
+        const res = await fetch("/api/system/status");
+        const data = await res.json();
+        console.log("LibreOffice Status Data:", data);
+
+        if (!loInstallPanel) return;
+
+        if (data.libreoffice_found) {
+          loInstallPanel.style.display = "none";
+        } else {
+          loInstallPanel.style.display = "block";
+          if (data.installing) {
+            btnInstallLO.style.display = "none";
+            loInstallStatus.style.display = "inline";
+          } else {
+            btnInstallLO.style.display = "inline";
+            loInstallStatus.style.display = "none";
+          }
+        }
+      } catch (err) {
+        console.error("System status check failed", err);
+      }
+    }
+
+    btnInstallLO.addEventListener("click", async () => {
+      if (!confirm("LibreOffice arka planda indirilip kurulacak. Devam etmek istiyor musunuz?")) return;
+      try {
+        const res = await fetch("/api/system/install_libreoffice", { method: "POST" });
+        await checkSystemStatus();
+      } catch (err) {
+        setStatus(`Kurulum başlatma hatası: ${err.message}`);
+      }
+    });
+
+    setInterval(checkSystemStatus, 5000);
+    checkSystemStatus();
+
+    fetchMedia();
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Q-Slidee Izleyici</title>
+  <style>
+    :root {
+      --bg: #04070f;
+      --line: rgba(148, 163, 184, 0.25);
+      --muted: #94a3b8;
+      --text: #e5e7eb;
+      --accent: #66e3ff;
+      --accent-2: #9f7bff;
+      --accent-3: #4cffd9;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #121a2b, var(--bg) 60%);
+      color: var(--text);
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      display: grid;
+      grid-template-rows: 1fr auto;
+    }
+
+    .stage {
+      padding: 14px;
+      display: grid;
+      place-items: center;
+    }
+
+    .empty {
+      width: min(980px, 96%);
+      min-height: 320px;
+      border: 1px dashed rgba(148, 163, 184, 0.2);
+      border-radius: 22px;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, rgba(10, 18, 34, 0.7), rgba(9, 13, 26, 0.3));
+      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.05);
+    }
+
+    .empty::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(circle, rgba(102, 227, 255, 0.08), transparent 55%),
+        radial-gradient(circle at 70% 30%, rgba(159, 123, 255, 0.12), transparent 60%);
+      animation: glowShift 8s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .brand-stage {
+      position: relative;
+      display: grid;
+      gap: 12px;
+      place-items: center;
+      text-align: center;
+      z-index: 1;
+    }
+
+    .brand-title {
+      font-family: "Bahnschrift", "Segoe UI Variable", "Segoe UI", sans-serif;
+      font-size: clamp(2.6rem, 6vw, 4.4rem);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: transparent;
+      background: linear-gradient(120deg, var(--accent), var(--accent-2), var(--accent-3));
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      position: relative;
+      padding: 8px 18px;
+      filter: drop-shadow(0 6px 20px rgba(102, 227, 255, 0.25));
+      animation: gradientSweep 6s ease-in-out infinite, floatText 3.4s ease-in-out infinite;
+    }
+
+    .brand-title::after {
+      content: "Q Slide";
+      position: absolute;
+      inset: 0;
+      color: transparent;
+      -webkit-text-stroke: 1px rgba(229, 231, 235, 0.18);
+      text-shadow: 0 0 18px rgba(159, 123, 255, 0.25);
+      filter: blur(0.1px);
+      animation: pulseStroke 2.8s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .brand-line {
+      width: min(320px, 70%);
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(102, 227, 255, 0.6), rgba(159, 123, 255, 0.6), transparent);
+      border-radius: 999px;
+      animation: lineScan 4s ease-in-out infinite;
+    }
+
+    .brand-subtitle {
+      font-size: 0.95rem;
+      color: rgba(148, 163, 184, 0.85);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    @keyframes gradientSweep {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes floatText {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    @keyframes pulseStroke {
+      0%, 100% { opacity: 0.65; }
+      50% { opacity: 1; }
+    }
+
+    @keyframes lineScan {
+      0%, 100% { transform: scaleX(0.8); opacity: 0.5; }
+      50% { transform: scaleX(1); opacity: 1; }
+    }
+
+    @keyframes glowShift {
+      0%, 100% { transform: translateY(0) scale(1); opacity: 0.7; }
+      50% { transform: translateY(-18px) scale(1.05); opacity: 1; }
+    }
+
+    .media-wrap {
+      width: 100%;
+      height: calc(100vh - 64px);
+      display: grid;
+      place-items: center;
+    }
+
+    .ppt-wrap {
+      width: 100%;
+      height: calc(100vh - 64px);
+      display: grid;
+      place-items: center;
+      padding: 10px;
+    }
+
+    .ppt-slide {
+      position: relative;
+      width: min(96vw, 1600px);
+      aspect-ratio: 16 / 9;
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+      overflow: hidden;
+    }
+
+    .ppt-text {
+      position: absolute;
+      white-space: pre-wrap;
+      overflow: hidden;
+      line-height: 1.25;
+      color: #111827;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+    }
+
+    .ppt-image {
+      position: absolute;
+      object-fit: contain;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    img, video {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 12px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+    }
+
+    .status {
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: .9rem;
+      padding: 8px 12px;
+    }
+
+    .unlock {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      background: rgba(4, 7, 15, 0.82);
+      z-index: 20;
+      padding: 16px;
+    }
+
+    .unlock.show { display: grid; }
+
+    .unlock-card {
+      width: min(420px, 96%);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #0a1222;
+      padding: 18px;
+      text-align: center;
+      color: var(--text);
+    }
+
+    .unlock-card button {
+      margin-top: 12px;
+      border: 0;
+      border-radius: 10px;
+      padding: 9px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #38bdf8;
+      color: #082033;
+    }
+  </style>
+</head>
+<body>
+  <main class="stage" id="stage"></main>
+  <div class="status" id="status">Baglanti hazirlaniyor...</div>
+  <div class="unlock" id="unlock">
+    <div class="unlock-card">
+      <div>Tarayici ses/video oynatmayi engelledi.</div>
+      <button id="unlockBtn" type="button">Medyayi Etkinlestir</button>
+    </div>
+  </div>
+
+  <script>
+    const stageEl = document.getElementById("stage");
+    const statusEl = document.getElementById("status");
+    const unlockEl = document.getElementById("unlock");
+    const unlockBtn = document.getElementById("unlockBtn");
+    let pollTimer = null;
+    let ws = null;
+    let lastViewKey = null;
+    let lastVideoCmdSeq = 0;
+    let lastBgmCmdSeq = 0;
+    let activeVideoEl = null;
+    let bgmEl = null;
+    let mediaUnlockRequired = false;
+    const POLL_MS = 350;
+
+    function setStatus(text) {
+      statusEl.textContent = text;
+    }
+
+    function setUnlockVisible(visible) {
+      unlockEl.classList.toggle("show", !!visible);
+      mediaUnlockRequired = !!visible;
+      if (visible) setStatus("Kontrol için host etkileşimi gerekli");
+    }
+
+    function tryPlay(el) {
+      if (!el) return;
+      const p = el.play();
+      if (!p || typeof p.then !== "function") return;
+      p.then(() => {
+        if (mediaUnlockRequired) setUnlockVisible(false);
+      }).catch(() => {
+        setUnlockVisible(true);
+      });
+    }
+
+    function seekByLag(el, lagSec) {
+      if (!el || !Number.isFinite(lagSec) || lagSec <= 0) return;
+      const applySeek = () => {
+        try {
+          const dur = Number.isFinite(el.duration) ? el.duration : null;
+          const target = dur && dur > 0 ? Math.min(lagSec, Math.max(0, dur - 0.05)) : lagSec;
+          if (Number.isFinite(target) && target >= 0) {
+            el.currentTime = target;
+          }
+        } catch (_) {}
+      };
+      if (el.readyState >= 1) {
+        applySeek();
+      } else {
+        el.addEventListener("loadedmetadata", applySeek, { once: true });
+      }
+    }
+
+    function lagFromControl(control) {
+      if (!control || !Number.isFinite(control.at_ms)) return 0;
+      return Math.max(0, (Date.now() - Number(control.at_ms)) / 1000);
+    }
+
+    function retryMediaPlaybackAfterUnlock() {
+      if (activeVideoEl) {
+        tryPlay(activeVideoEl);
+      }
+      if (bgmEl) {
+        tryPlay(bgmEl);
+      }
+    }
+
+    function renderEmpty() {
+      stageEl.innerHTML = `
+        <div class="empty">
+          <div class="brand-stage" aria-hidden="true">
+            <div class="brand-title">Q Slıde</div>
+            <div class="brand-line"></div>
+            <div class="brand-subtitle">Viewer ready</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderMedia(media) {
+      if (!media) {
+        renderEmpty();
+        lastViewKey = null;
+        activeVideoEl = null;
+        return;
+      }
+      const viewKey = `media:${media.id}`;
+      if (lastViewKey === viewKey) return;
+      lastViewKey = viewKey;
+
+      const wrap = document.createElement("div");
+      wrap.className = "media-wrap";
+
+      if (media.type === "image") {
+        const img = document.createElement("img");
+        img.src = media.url;
+        img.alt = media.name || "image";
+        wrap.appendChild(img);
+      } else {
+        const video = document.createElement("video");
+        video.src = media.url;
+        video.controls = false;
+        video.autoplay = true;
+        video.loop = false;
+        video.playsInline = true;
+        video.disablePictureInPicture = true;
+        video.setAttribute("controlsList", "nodownload noplaybackrate noremoteplayback");
+        video.style.pointerEvents = "none";
+        wrap.appendChild(video);
+        activeVideoEl = video;
+        video.addEventListener("loadedmetadata", () => tryPlay(video), { once: true });
+      }
+
+      stageEl.innerHTML = "";
+      stageEl.appendChild(wrap);
+    }
+
+    function renderPptSlide(slide) {
+      if (!slide) {
+        renderEmpty();
+        lastViewKey = null;
+        activeVideoEl = null;
+        return;
+      }
+      const viewKey = `ppt:${slide.index}`;
+      if (lastViewKey === viewKey) return;
+      lastViewKey = viewKey;
+      activeVideoEl = null;
+
+      const wrap = document.createElement("div");
+      wrap.className = "ppt-wrap";
+
+      const board = document.createElement("div");
+      board.className = "ppt-slide";
+      if (slide.background) board.style.background = slide.background;
+
+      const baseW = Number(slide.width) || 1920;
+      const baseH = Number(slide.height) || 1080;
+      for (const item of slide.elements || []) {
+        const leftPct = (Number(item.left || 0) / baseW) * 100;
+        const topPct = (Number(item.top || 0) / baseH) * 100;
+        const widthPct = (Number(item.width || 0) / baseW) * 100;
+        const heightPct = (Number(item.height || 0) / baseH) * 100;
+
+        if (item.type === "text") {
+          const el = document.createElement("div");
+          el.className = "ppt-text";
+          el.textContent = item.text || "";
+          el.style.left = `${leftPct}%`;
+          el.style.top = `${topPct}%`;
+          el.style.width = `${widthPct}%`;
+          el.style.height = `${heightPct}%`;
+          if (item.font_size) {
+            const scale = 100 / baseW;
+            el.style.fontSize = `${Math.max(12, Number(item.font_size) * scale * 10)}px`;
+          }
+          if (item.color) el.style.color = item.color;
+          if (item.align) el.style.textAlign = item.align;
+          board.appendChild(el);
+        }
+
+        if (item.type === "image" && item.src) {
+          const el = document.createElement("img");
+          el.className = "ppt-image";
+          el.src = item.src;
+          el.alt = "slide-image";
+          el.style.left = `${leftPct}%`;
+          el.style.top = `${topPct}%`;
+          el.style.width = `${widthPct}%`;
+          el.style.height = `${heightPct}%`;
+          board.appendChild(el);
+        }
+      }
+
+      wrap.appendChild(board);
+      stageEl.innerHTML = "";
+      stageEl.appendChild(wrap);
+    }
+
+    function ensureBgmElement(bgmMedia) {
+      if (!bgmMedia) return null;
+      const targetTag = bgmMedia.type === "video" ? "video" : "audio";
+      if (!bgmEl || bgmEl.tagName.toLowerCase() !== targetTag) {
+        if (bgmEl) bgmEl.remove();
+        bgmEl = document.createElement(targetTag);
+        bgmEl.style.display = "none";
+        bgmEl.preload = "auto";
+        bgmEl.loop = true;
+        bgmEl.playsInline = true;
+        document.body.appendChild(bgmEl);
+      }
+      if (bgmEl.src !== new URL(bgmMedia.url, location.origin).toString()) {
+        bgmEl.src = bgmMedia.url;
+      }
+      return bgmEl;
+    }
+
+    function applyVideoControl(control) {
+      if (!control || !control.seq || !activeVideoEl) return;
+      if (control.seq <= lastVideoCmdSeq) return;
+      lastVideoCmdSeq = control.seq;
+      const lag = lagFromControl(control);
+      if (control.action === "play") {
+        seekByLag(activeVideoEl, lag);
+        tryPlay(activeVideoEl);
+      }
+      if (control.action === "pause") activeVideoEl.pause();
+      if (control.action === "restart") {
+        seekByLag(activeVideoEl, lag);
+        tryPlay(activeVideoEl);
+      }
+    }
+
+    function applyBgmControl(state) {
+      const control = state.bgm_control || null;
+      const bgmMedia = state.bgm_media || null;
+      if (!bgmMedia) {
+        if (bgmEl) {
+          bgmEl.pause();
+          bgmEl.remove();
+          bgmEl = null;
+        }
+        return;
+      }
+
+      const el = ensureBgmElement(bgmMedia);
+      if (!el) return;
+      if (typeof state.bgm_volume === "number") {
+        el.volume = Math.max(0, Math.min(1, state.bgm_volume));
+      }
+      if (!control || !control.seq || control.seq <= lastBgmCmdSeq) return;
+      lastBgmCmdSeq = control.seq;
+      const lag = lagFromControl(control);
+      if (control.action === "play") {
+        seekByLag(el, lag);
+        tryPlay(el);
+      }
+      if (control.action === "pause") el.pause();
+      if (control.action === "stop") {
+        el.pause();
+        el.currentTime = 0;
+      }
+      if (control.action === "restart") {
+        seekByLag(el, lag);
+        tryPlay(el);
+      }
+      if (control.action === "volume" && typeof control.volume === "number") {
+        el.volume = Math.max(0, Math.min(1, control.volume));
+      }
+    }
+
+    function applyState(state) {
+      if (state.current_ppt_slide) {
+        renderPptSlide(state.current_ppt_slide);
+      } else {
+        renderMedia(state.current_media || null);
+      }
+      applyVideoControl(state.video_control || null);
+      applyBgmControl(state);
+    }
+
+    async function fetchState() {
+      try {
+        const response = await fetch(`/api/state?t=${Date.now()}`, { cache: "no-store" });
+        const state = await response.json();
+        applyState(state);
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          setStatus("Polling modu aktif");
+        }
+      } catch {
+        setStatus("Durum verisi alınamadı");
+      }
+    }
+
+    function startPolling() {
+      if (pollTimer) return;
+      fetchState();
+      pollTimer = setInterval(fetchState, POLL_MS);
+    }
+
+    function stopPolling() {
+      if (!pollTimer) return;
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+
+    function connectWebSocket() {
+      const proto = location.protocol === "https:" ? "wss" : "ws";
+      ws = new WebSocket(`${proto}://${location.host}/ws`);
+
+      ws.onopen = () => {
+        stopPolling();
+        setStatus("Canlı bağlantı aktif");
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === "state") {
+            applyState(msg.payload || {});
+          }
+        } catch {
+          setStatus("Mesaj okunamadı");
+        }
+      };
+
+      ws.onclose = () => {
+        setStatus("WebSocket yok, polling fallback aktif");
+        startPolling();
+      };
+
+      ws.onerror = () => {
+        setStatus("WebSocket hatası, polling fallback aktif");
+        startPolling();
+      };
+    }
+
+    renderEmpty();
+    unlockBtn.addEventListener("click", () => {
+      setUnlockVisible(false);
+      retryMediaPlaybackAfterUnlock();
+    });
+    connectWebSocket();
+    startPolling();
+  </script>
+</body>
+</html>
