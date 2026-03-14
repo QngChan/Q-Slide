@@ -527,8 +527,10 @@
     let pptState = { decks: [], active_deck_id: null, active_slide_index: null };
 
     function setStatus(text) {
+      const nextText = `Durum: ${text}`;
+      if (statusEl.textContent === nextText) return;
       console.log("Status update:", text);
-      statusEl.textContent = `Durum: ${text}`;
+      statusEl.textContent = nextText;
     }
 
     function mediaNameById(id) {
@@ -552,11 +554,16 @@
         const img = document.createElement("img");
         img.src = item.url;
         img.alt = item.name;
+        img.loading = "lazy";
+        img.decoding = "async";
         thumb.appendChild(img);
       } else if (item.type === "video") {
         const vid = document.createElement("video");
         vid.src = item.url;
         vid.muted = true;
+        vid.preload = "metadata";
+        vid.playsInline = true;
+        vid.disablePictureInPicture = true;
         thumb.appendChild(vid);
       } else {
         thumb.textContent = "AUDIO";
@@ -587,6 +594,8 @@
         const img = document.createElement("img");
         img.src = deck.preview_src;
         img.alt = deck.name || "Sunum";
+        img.loading = "lazy";
+        img.decoding = "async";
         thumb.appendChild(img);
       } else {
         thumb.textContent = "SUNUM";
@@ -607,21 +616,25 @@
     function renderLibrary() {
       presentationLibraryEl.innerHTML = "";
       musicLibraryEl.innerHTML = "";
+      const presentationFrag = document.createDocumentFragment();
+      const musicFrag = document.createDocumentFragment();
 
       for (const item of mediaItems) {
         const bucket = item.bucket || (item.type === "audio" ? "music" : "presentation");
         if (bucket === "presentation") {
-          presentationLibraryEl.appendChild(buildCard(item, "presentation"));
+          presentationFrag.appendChild(buildCard(item, "presentation"));
         }
         if (bucket === "music") {
-          musicLibraryEl.appendChild(buildCard(item, "music"));
+          musicFrag.appendChild(buildCard(item, "music"));
         }
       }
       const decks = pptState.decks || [];
       const activeDeckId = pptState.active_deck_id || "";
       for (const deck of decks) {
-        presentationLibraryEl.appendChild(buildDeckCard(deck, deck.id === activeDeckId));
+        presentationFrag.appendChild(buildDeckCard(deck, deck.id === activeDeckId));
       }
+      presentationLibraryEl.appendChild(presentationFrag);
+      musicLibraryEl.appendChild(musicFrag);
       updateBgmLabel();
     }
 
@@ -940,7 +953,8 @@
       }
     });
 
-    setInterval(checkSystemStatus, 5000);
+    const SYSTEM_STATUS_POLL_MS = 10000;
+    setInterval(checkSystemStatus, SYSTEM_STATUS_POLL_MS);
     checkSystemStatus();
 
     fetchMedia();

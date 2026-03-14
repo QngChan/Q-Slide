@@ -110,6 +110,15 @@
       font-weight: 600;
     }
 
+    @media (prefers-reduced-motion: reduce) {
+      .empty::before,
+      .brand-title,
+      .brand-title::after,
+      .brand-line {
+        animation: none !important;
+      }
+    }
+
     @keyframes gradientSweep {
       0% { background-position: 0% 50%; }
       50% { background-position: 100% 50%; }
@@ -252,6 +261,7 @@
     const POLL_MS = 350;
 
     function setStatus(text) {
+      if (statusEl.textContent === text) return;
       statusEl.textContent = text;
     }
 
@@ -334,6 +344,7 @@
         const img = document.createElement("img");
         img.src = media.url;
         img.alt = media.name || "image";
+        img.decoding = "async";
         wrap.appendChild(img);
       } else {
         const video = document.createElement("video");
@@ -403,6 +414,7 @@
           el.className = "ppt-image";
           el.src = item.src;
           el.alt = "slide-image";
+          el.decoding = "async";
           el.style.left = `${leftPct}%`;
           el.style.top = `${topPct}%`;
           el.style.width = `${widthPct}%`;
