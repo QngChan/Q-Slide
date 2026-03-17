@@ -1,77 +1,26 @@
-﻿# Q-Slidee Conference
+Q-Slide
 
-Q-Slidee iki ekrandan olusur:
+Q-Slide iki ekrandan oluşur:
 
-- Host ekrani: Web tabanli panel, masaustunde app-window olarak acilir (Edge/Chrome `--app`)
-- Izleyici ekrani: Sadece aktif foto/video medyasini gosterir
+Sunucu (Host) ekranı: Web tabanlı bir paneldir. Masaüstünde uygulama penceresi (Edge/Chrome --app) olarak açılır.
 
-## Urun Modeli (Guncel)
-- Metin/slayt yayinlama yok.
-- Host:
-  - foto/video dosyasi yukler,
-  - PowerPoint (`.pptx`) yukler ve slaytlari dogrudan sunum modunda render eder (PNG dosya uretmez),
-  - medya kutuphanesinden secip izleyiciye yansitir,
-  - PowerPoint icin onceki/sonraki slayt komutlarini verir,
-  - sagdaki buyuk side preview panelinde izleyicinin gordugunu canli izler.
-- Viewer:
-  - ilk acilista bos ekran gorur,
-  - host aktif medya sectiginde onu tam ekran gorur.
+İzleyici (Viewer) ekranı: Yalnızca aktif fotoğraf veya video içeriğini gösterir.
 
-## Kurulum
+Ürün Modeli
+Sunucu (Host)
 
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-```
+Fotoğraf ve video dosyası yükler.
 
-## Calistirma
+PowerPoint (.pptx) dosyası yükler ve slaytları doğrudan sunum modunda gösterir (PNG dosyası üretmez).
 
-```bash
-python app/host.py
-```
+Medya kütüphanesinden içerik seçerek izleyici ekranına yansıtır.
 
-Terminal acilmasin isterseniz:
+PowerPoint için önceki ve sonraki slayt komutlarını yönetir.
 
-```bash
-pythonw start_host.pyw
-```
+Sağ tarafta bulunan büyük ön izleme panelinde, izleyicinin gördüğünü canlı olarak takip eder.
 
-Windows'ta terminalsiz calistirmak icin `start_host.pyw` dosyasini cift tiklayabilirsiniz.
+İzleyici (Viewer)
 
-Alternatif:
+İlk açılışta boş ekran görüntülenir.
 
-```bash
-python -m app.host
-```
-
-Host uygulamasi acildiginda ayni anda web sunucusu da baslar.
-- Varsayilan port `8100` doluysa otomatik olarak bos bir porta gecer.
-- Host app-window ve izleyici linki terminalde yazdirilir.
-- WebSocket kutuphanesi yoksa sistem polling fallback ile calismaya devam eder.
-- PowerPoint senkronu icin Microsoft PowerPoint gerekmez.
-- Render uygulama icinde yerel olarak yapilir (`python-pptx`).
-
-## EXE Build (Windows)
-
-```powershell
-.\build_exe.ps1
-```
-
-EXE cikisi:
-- `dist\Q-Slidee.exe`
-
-Notlar:
-- PyInstaller kurulumlari `requirements-dev.txt` icindedir.
-- `app/web` dosyalari EXE icine dahil edilir.
-
-## Dokumantasyon (Agent Context)
-
-Yeni bir AI agent bu projede calismaya baslamadan once asagidaki dosyalari okumali:
-
-1. `AGENT_CONTEXT.md`
-2. `ARCHITECTURE.md`
-3. `CHANGELOG.md`
-4. `NEXT_STEPS.md`
-
-Her yeni ozellik veya davranis degisikliginde bu dosyalar ayni degisiklikte guncellenmelidir.
+Sunucu aktif bir medya seçtiğinde, bu içerik tam ekran olarak gösterilir.
