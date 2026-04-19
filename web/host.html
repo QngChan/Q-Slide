@@ -1,0 +1,1999 @@
+<!doctype html>
+<html lang="tr">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Q-Slidee Host</title>
+  <style>
+    :root {
+      --accent: #666666;
+      --accent-2: #888888;
+      --warn: #999999;
+      --ok: #aaaaaa;
+      --danger: #555555;
+    }
+
+    body[data-theme="dark"] {
+      --tone-0: #000000;
+      --tone-1: #0a0a0a;
+      --tone-2: #1a1a1a;
+      --tone-3: #2a2a2a;
+      --tone-4: #3a3a3a;
+      --bg0: var(--tone-0);
+      --bg1: var(--tone-1);
+      --bg2: var(--tone-2);
+      --panel: rgba(10, 10, 10, 0.95);
+      --line: rgba(60, 60, 60, 0.3);
+      --text: #e0e0e0;
+      --muted: #888888;
+      --card-bg: rgba(15, 15, 15, 0.9);
+      --chip-bg: rgba(255, 255, 255, 0.02);
+      --bg-glow-1: rgba(40, 40, 40, 0.3);
+      --bg-glow-2: rgba(30, 30, 30, 0.25);
+      --select-bg: #1a1a1a;
+      --select-border: #333333;
+      --select-text: #cccccc;
+    }
+
+    body[data-theme="light"] {
+      --tone-0: #c0c0c0;
+      --tone-1: #d3d3d3;
+      --tone-2: #e0e0e0;
+      --tone-3: #f0f0f0;
+      --tone-4: #ffffff;
+      --bg0: #1a1a1a;
+      --bg1: #222222;
+      --bg2: #2a2a2a;
+      --panel: rgba(30, 30, 30, 0.95);
+      --line: rgba(100, 100, 100, 0.25);
+      --text: #e0e0e0;
+      --muted: #999999;
+      --card-bg: rgba(40, 40, 40, 0.9);
+      --chip-bg: rgba(255, 255, 255, 0.03);
+      --bg-glow-1: rgba(50, 50, 50, 0.4);
+      --bg-glow-2: rgba(40, 40, 40, 0.35);
+      --select-bg: #1a1a1a;
+      --select-border: #444444;
+      --select-text: #cccccc;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Bahnschrift", "Trebuchet MS", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 10%, var(--bg-glow-1) 0%, transparent 48%),
+        radial-gradient(circle at 86% 92%, var(--bg-glow-2) 0%, transparent 42%),
+        linear-gradient(140deg, var(--bg2), var(--bg0) 58%);
+      padding: 14px;
+    }
+
+    .app {
+      min-height: calc(100vh - 28px);
+      display: grid;
+      grid-template-columns: minmax(420px, 1fr) minmax(380px, 48vw);
+      gap: 12px;
+    }
+
+    .host-shell {
+      display: grid;
+      grid-template-rows: auto auto 1fr auto auto;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel);
+      padding: 12px;
+      backdrop-filter: blur(4px);
+      min-width: 0;
+    }
+
+    .header {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: linear-gradient(140deg, rgba(50, 50, 50, 0.3), rgba(30, 30, 30, 0.1));
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 1.18rem;
+      letter-spacing: 0.2px;
+      color: #ffffff;
+    }
+
+    .sub {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .group {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--chip-bg);
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .group-title {
+      font-size: 0.85rem;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .upload-row {
+      border: 1px dashed rgba(100, 100, 100, 0.5);
+      border-radius: 10px;
+      background: rgba(80, 80, 80, 0.08);
+      padding: 9px;
+    }
+
+    .upload-row.drag-active {
+      border-color: rgba(150, 150, 150, 0.7);
+      background: rgba(120, 120, 120, 0.15);
+      box-shadow: 0 0 0 2px rgba(100, 100, 100, 0.1);
+    }
+
+    .drop-hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .drop-warning {
+      border: 1px solid rgba(120, 120, 120, 0.6);
+      background: rgba(80, 80, 80, 0.15);
+      color: #cccccc;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 0.82rem;
+    }
+
+    .drop-warning.hidden {
+      display: none;
+    }
+
+    .upload-errors {
+      border: 1px solid rgba(251, 113, 133, 0.6);
+      background: rgba(251, 113, 133, 0.1);
+      color: #fecdd3;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 0.82rem;
+      display: grid;
+      gap: 6px;
+    }
+
+    .upload-errors.hidden {
+      display: none;
+    }
+
+    .upload-errors-title {
+      font-weight: 700;
+    }
+
+    .upload-errors-list {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 4px;
+    }
+
+    input[type=file] {
+      color: var(--text);
+      max-width: 100%;
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    .file-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    button {
+      border: 1px solid rgba(80, 80, 80, 0.5);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.15px;
+      cursor: pointer;
+      transition: transform .08s ease, filter .15s ease, background .2s ease;
+      color: #e0e0e0;
+      background: #1a1a1a;
+    }
+
+    button:hover {
+      filter: brightness(1.15);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    button:disabled {
+      opacity: .6;
+      cursor: default;
+    }
+
+    .btn-primary {
+      background: linear-gradient(120deg, #3a3a3a, #2a2a2a);
+      border-color: #555555;
+      color: #ffffff;
+    }
+
+    .btn-warn {
+      background: #2a2a2a;
+      border-color: #555555;
+      color: #cccccc;
+    }
+
+    .btn-danger {
+      background: #1a1a1a;
+      border-color: #444444;
+      color: #999999;
+    }
+
+    .btn-ok {
+      background: #252525;
+      border-color: #555555;
+      color: #bbbbbb;
+    }
+
+    .media-grid-wrap {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--chip-bg);
+      padding: 10px;
+      display: grid;
+      gap: 10px;
+      min-height: 260px;
+      overflow: auto;
+      align-content: start;
+    }
+
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 10px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--card-bg);
+      overflow: hidden;
+      cursor: pointer;
+      position: relative;
+      transition: transform .08s ease, box-shadow .15s ease, border-color .15s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-1px);
+      border-color: rgba(56, 189, 248, 0.5);
+      box-shadow: 0 8px 18px rgba(2, 10, 24, 0.45);
+    }
+
+    .card.active-main {
+      outline: 2px solid var(--warn);
+    }
+
+    .card.active-bgm {
+      box-shadow: inset 0 0 0 2px #4aa2ff;
+    }
+
+    .card-menu-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 2;
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(15, 23, 42, 0.82);
+      border-color: rgba(148, 163, 184, 0.4);
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .card-menu {
+      position: absolute;
+      top: 46px;
+      right: 8px;
+      z-index: 3;
+      min-width: 180px;
+      display: grid;
+      gap: 6px;
+      padding: 8px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      box-shadow: 0 18px 30px rgba(2, 6, 23, 0.45);
+    }
+
+    .card-menu button {
+      width: 100%;
+      text-align: left;
+      padding: 8px 10px;
+    }
+
+    .thumb {
+      height: 96px;
+      background: var(--tone-1);
+      display: grid;
+      place-items: center;
+      color: #e2e8f0;
+      font-size: 0.76rem;
+    }
+
+    .thumb img,
+    .thumb video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .meta {
+      padding: 7px 8px;
+      font-size: 0.76rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .audio-box {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--chip-bg);
+      padding: 10px;
+      display: grid;
+      gap: 9px;
+    }
+
+    .audio-top {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .audio-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .video-controls {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--chip-bg);
+      padding: 8px;
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    input[type="range"] {
+      width: 220px;
+    }
+
+    .status {
+      border-top: 1px solid var(--line);
+      padding-top: 8px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .upload-progress {
+      margin-top: 8px;
+      display: grid;
+      gap: 6px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .upload-progress.hidden {
+      display: none;
+    }
+
+    .upload-progress-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .upload-progress-track {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.2);
+      overflow: hidden;
+    }
+
+    .upload-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #3a3a3a, #555555);
+      transition: width 0.2s ease;
+    }
+
+    .preview {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel);
+      padding: 10px;
+      resize: horizontal;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 8px;
+      min-width: 360px;
+    }
+
+    .preview-head {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--chip-bg);
+      padding: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .preview iframe {
+      width: 100%;
+      height: 100%;
+      min-height: 520px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #000;
+    }
+
+    .preview.collapsed {
+      display: none;
+    }
+
+    .doc-wrap {
+      width: 100%;
+      height: min(72vh, 900px);
+      min-height: 520px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      padding: 10px;
+      overscroll-behavior: contain;
+      background: #000;
+      border-radius: 12px;
+    }
+
+    .doc-page {
+      width: 96%;
+      background: #fff;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 7, 18, 0.72);
+      display: grid;
+      place-items: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+
+    .modal-backdrop.hidden {
+      display: none;
+    }
+
+    .modal {
+      width: min(640px, 96vw);
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: 0 18px 40px rgba(2, 6, 23, 0.45);
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .modal-title {
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .modal-body {
+      font-size: 0.9rem;
+      color: var(--text);
+      display: grid;
+      gap: 8px;
+    }
+
+    .modal-body ol {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      display: grid;
+      gap: 6px;
+    }
+
+    @media (max-width: 1200px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .preview {
+        resize: vertical;
+        min-width: 0;
+      }
+
+      .preview iframe {
+        min-height: 380px;
+      }
+
+      .audio-top {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+  <body data-theme="dark">
+    <div class="app">
+      <section class="host-shell">
+        <header class="header">
+          <div>
+            <h1 class="title">Q-Slide Host Kontrol Merkezi</h1>
+          <div class="sub">Sunum medyasi, müzik ve izleyici ekrani buradan yönetilir.</div>
+        </div>
+        <div class="row">
+          <select id="themeSelect"
+            style="padding:8px;border-radius:10px;background:var(--select-bg);color:var(--select-text);border:1px solid var(--select-border);">
+            <option value="dark">Siyah Tema</option>
+            <option value="light">Açık Tema</option>
+          </select>
+          <button id="togglePreview">Ön İzlemeyi Kapat</button>
+          <button id="refresh">Yenile</button>
+          <button id="openViewer" class="btn-primary">İzleyiciyi Aç</button>
+          <button id="copyViewerUrl">URL Kopyala</button>
+        </div>
+      </header>
+
+      <section class="group">
+        <p class="group-title">Dosya Ekleme</p>
+        <div class="row upload-row" id="presentationDrop">
+          <input id="files" class="file-input" type="file" multiple
+            accept="image/*,video/*,audio/*,.pptx,.docx,.xlsx,.xls,.pdf" />
+          <span id="filesLabel" class="file-label">Dosya seçilmedi.</span>
+          <button id="upload" class="btn-primary">Dosya Ekle</button>
+          <span class="drop-hint">Sürükle-bırak ile yükleyin</span>
+        </div>
+        <div id="presentationDropWarning" class="drop-warning hidden"></div>
+        <div id="presentationUploadErrors" class="upload-errors hidden">
+          <div class="upload-errors-title">Başarısız Yüklemeler</div>
+          <ol class="upload-errors-list"></ol>
+        </div>
+      </section>
+
+      <section id="pptSection" class="group hidden">
+        <p class="group-title">Sunum</p>
+        <div id="loInstallPanel"
+          style="display:none; border:1px solid var(--warn); background:rgba(245, 158, 11, 0.1); padding:10px; border-radius:10px; margin-bottom:8px;">
+          <div style="font-size:0.85rem; color:var(--warn); margin-bottom:8px;">
+            Yüksek kaliteli sunum için LibreOffice gerekli. Kurmak ister misiniz? (Arka planda indirilir ve kurulur)
+          </div>
+          <div class="row">
+            <button id="btnInstallLO" class="btn-warn">LibreOffice Kur</button>
+            <span id="loInstallStatus" class="sub" style="display:none;">İndiriliyor ve kuruluyor...</span>
+          </div>
+        </div>
+        <div class="sub">Sunum dosyalarını yukarıdaki birleşik alandan yükleyin.</div>
+        <div class="row">
+          <select id="pptDeckSelect"
+            style="min-width:240px;padding:8px;border-radius:10px;background:var(--select-bg);color:var(--select-text);border:1px solid var(--select-border);"></select>
+          <button id="pptSelect">Sunumu Seç</button>
+          <button id="pptPrev">Önceki Slayt</button>
+          <button id="pptNext" class="btn-warn">Sonraki Slayt</button>
+        </div>
+        <div id="pptInfo" class="sub">Aktif Sunum: Yok</div>
+      </section>
+
+      <section class="media-grid-wrap">
+        <p class="group-title">Sunum Dosyaları</p>
+        <div id="presentationLibrary" class="media-grid"></div>
+      </section>
+
+      <section id="musicPanel" class="audio-box hidden">
+        <div class="audio-top">
+          <div>
+            <p class="group-title" style="margin-bottom:6px;">Ses Durumu</p>
+            <div id="bgmLabel" class="sub">Seçili Müzik: Yok</div>
+          </div>
+        </div>
+
+        <div>
+          <p class="group-title" style="margin-bottom:6px;">Müzik Dosyaları</p>
+          <div id="musicLibrary" class="media-grid"></div>
+        </div>
+
+        <div>
+          <p class="group-title" style="margin-bottom:6px;">Ses Kontrolleri</p>
+          <div class="audio-controls">
+            <button id="bgmToggle" class="btn-ok">Müzik Oynat</button>
+            <button id="bgmRestart" class="btn-warn">Müzik Restart</button>
+            <button id="bgmStop" class="btn-danger">Müzik Stop</button>
+            <div style="flex:1; display:flex; align-items:center; gap:8px;">
+              <input id="bgmSeek" type="range" min="0" max="100" value="0" style="flex:1;" />
+              <span id="bgmTimeText" class="sub" style="min-width:80px; text-align:right;">00:00 / 00:00</span>
+            </div>
+            <span class="sub">Ses:</span>
+            <input id="bgmVolume" type="range" min="0" max="100" value="70" />
+            <span id="bgmVolumeText" class="sub">70%</span>
+          </div>
+        </div>
+      </section>
+
+      <div id="status" class="status">
+        <div id="statusText">Durum: Hazır</div>
+        <div id="uploadProgress" class="upload-progress hidden">
+          <div class="upload-progress-label">
+            <span id="uploadProgressText">Yükleniyor...</span>
+            <span id="uploadProgressPercent">0%</span>
+          </div>
+          <div class="upload-progress-track">
+            <div id="uploadProgressBar" class="upload-progress-bar"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside id="previewPanel" class="preview">
+      <div class="preview-head">
+        <div>
+          <strong>Ön İzleme</strong>
+          <div class="sub">İzleyici ekraninin canlı görünümü</div>
+        </div>
+      </div>
+
+      <iframe id="previewFrame" src="/?hostPreview=1" title="Viewer Preview" allow="autoplay; fullscreen"></iframe>
+
+      <div id="videoControlsPanel" class="hidden">
+        <p class="group-title" style="margin-bottom:6px;">Video Kontrolleri</p>
+        <div class="video-controls">
+          <button id="videoToggle" class="btn-ok">Video Oynat</button>
+          <button id="videoRestart" class="btn-warn">Video Restart</button>
+          <div style="width:100%; display:flex; align-items:center; gap:8px; margin-top:8px;">
+            <input id="videoSeek" type="range" min="0" max="100" value="0" style="flex:1;" />
+            <span id="videoTimeText" class="sub" style="min-width:80px; text-align:right;">00:00 / 00:00</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div id="errorModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal-header">
+        <div id="errorTitle" class="modal-title">Hata</div>
+        <button id="errorClose">Kapat</button>
+      </div>
+      <div id="errorBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    const filesEl = document.getElementById("files");
+    const filesLabelEl = document.getElementById("filesLabel");
+    const uploadBtn = document.getElementById("upload");
+    const refreshBtn = document.getElementById("refresh");
+    const pptDeckSelectEl = document.getElementById("pptDeckSelect");
+    const themeSelectEl = document.getElementById("themeSelect");
+    const pptInfoEl = document.getElementById("pptInfo");
+    const presentationLibraryEl = document.getElementById("presentationLibrary");
+    const musicLibraryEl = document.getElementById("musicLibrary");
+    const statusEl = document.getElementById("status");
+    const statusTextEl = document.getElementById("statusText");
+    const uploadProgressEl = document.getElementById("uploadProgress");
+    const uploadProgressTextEl = document.getElementById("uploadProgressText");
+    const uploadProgressPercentEl = document.getElementById("uploadProgressPercent");
+    const uploadProgressBarEl = document.getElementById("uploadProgressBar");
+    const bgmLabelEl = document.getElementById("bgmLabel");
+    const bgmVolumeEl = document.getElementById("bgmVolume");
+    const bgmVolumeTextEl = document.getElementById("bgmVolumeText");
+    const musicPanelEl = document.getElementById("musicPanel");
+    const previewPanelEl = document.getElementById("previewPanel");
+    const videoControlsPanelEl = document.getElementById("videoControlsPanel");
+    const togglePreviewBtn = document.getElementById("togglePreview");
+    const loInstallPanel = document.getElementById("loInstallPanel");
+    const btnInstallLO = document.getElementById("btnInstallLO");
+    const loInstallStatus = document.getElementById("loInstallStatus");
+    const errorModalEl = document.getElementById("errorModal");
+    const errorTitleEl = document.getElementById("errorTitle");
+    const errorBodyEl = document.getElementById("errorBody");
+    const errorCloseBtn = document.getElementById("errorClose");
+    const presentationDropEl = document.getElementById("presentationDrop");
+    const presentationDropWarningEl = document.getElementById("presentationDropWarning");
+    const presentationUploadErrorsEl = document.getElementById("presentationUploadErrors");
+
+    let mediaItems = [];
+    let currentMainId = null;
+    let currentBgmId = null;
+    let currentPptDeck = null;
+    let openMenuId = null;
+    let currentPdfMediaId = null;
+    let currentPdfScrollPct = 0;
+    let pollTimer = null;
+
+    // Global Constants
+    const DOC_EXTS = new Set([".pptx", ".docx", ".xlsx", ".xls", ".pdf"]);
+    const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg"]);
+    const VIDEO_EXTS = new Set([".mp4", ".webm", ".mov", ".mkv", ".avi", ".m4v"]);
+    const AUDIO_EXTS = new Set([".mp3", ".wav", ".ogg", ".flac", ".m4a", ".aac"]);
+
+    function makeRetryHandler(url, options) {
+      return async () => {
+        const refreshed = await refreshStateOnce();
+        if (!refreshed) return { handled: false };
+        const retry = await requestOnce(url, options);
+        return retry.ok ? { handled: true, response: retry.response } : { handled: false };
+      };
+    }
+
+    function parseErrorDetail(text) {
+      if (!text) return "";
+      try {
+        const data = JSON.parse(text);
+        if (data && typeof data.detail === "string") return data.detail;
+        if (data && data.detail && typeof data.detail[0]?.msg === "string") return data.detail[0].msg;
+      } catch (_) {}
+      return text;
+    }
+
+    async function readResponseDetail(response) {
+      return parseErrorDetail(await response.text());
+    }
+
+    let pptState = { decks: [], active_deck_id: null, active_slide_index: null };
+
+    function setStatus(text) {
+      const nextText = `Durum: ${text}`;
+      if (statusTextEl.textContent === nextText) return;
+      console.log("Status update:", text);
+      statusTextEl.textContent = nextText;
+    }
+
+    function setUploadProgress(label, loadedBytes, totalBytes) {
+      if (!uploadProgressEl) return;
+      if (!Number.isFinite(totalBytes) || totalBytes <= 0) {
+        uploadProgressEl.classList.remove("hidden");
+        uploadProgressTextEl.textContent = label;
+        uploadProgressPercentEl.textContent = "";
+        uploadProgressBarEl.style.width = "100%";
+        return;
+      }
+      const percent = Math.min(100, Math.round((loadedBytes / totalBytes) * 100));
+      uploadProgressEl.classList.remove("hidden");
+      uploadProgressTextEl.textContent = `${label} (${formatBytes(loadedBytes)} / ${formatBytes(totalBytes)})`;
+      uploadProgressPercentEl.textContent = `${percent}%`;
+      uploadProgressBarEl.style.width = `${percent}%`;
+    }
+
+    function hideUploadProgress() {
+      if (!uploadProgressEl) return;
+      uploadProgressEl.classList.add("hidden");
+      uploadProgressTextEl.textContent = "";
+      uploadProgressPercentEl.textContent = "";
+      uploadProgressBarEl.style.width = "0%";
+    }
+
+    function showErrorPopup(title, message, steps) {
+      errorTitleEl.textContent = title || "Hata";
+      errorBodyEl.innerHTML = "";
+
+      const msg = document.createElement("div");
+      msg.textContent = message || "Beklenmeyen bir hata oluştu.";
+      errorBodyEl.appendChild(msg);
+
+      if (steps && steps.length) {
+        const list = document.createElement("ol");
+        for (const step of steps) {
+          const li = document.createElement("li");
+          li.textContent = step;
+          list.appendChild(li);
+        }
+        errorBodyEl.appendChild(list);
+      }
+
+      errorModalEl.classList.remove("hidden");
+    }
+
+    function hideErrorPopup() {
+      errorModalEl.classList.add("hidden");
+    }
+
+    function buildHelpForError(context, status, detail) {
+      const message = detail || (status ? `HTTP ${status}` : "Bilinmeyen hata.");
+      const lower = message.toLowerCase();
+      const steps = [];
+
+      if (status === 0) {
+        steps.push("Host uygulamasının açık olduğundan emin olun.");
+        steps.push("Tarayıcıyı yenileyin ve tekrar deneyin.");
+        steps.push("Güvenlik duvarı/antivirüs engeli varsa izin verin.");
+      }
+
+      if (status === 413) {
+        steps.push("Dosya boyutu çok büyük olabilir. Daha küçük dosya deneyin.");
+        steps.push("Gerekirse dosyayı parçalayarak yükleyin.");
+      }
+
+      if (lower.includes("libreoffice") && (lower.includes("not found") || lower.includes("gerekli"))) {
+        steps.push("LibreOffice kurulu değil. Host panelindeki 'LibreOffice Kur' butonunu kullanın.");
+        steps.push("Kurulum bittikten sonra yüklemeyi tekrar deneyin.");
+      }
+
+      if (lower.includes("tüm dönüştürme yöntemleri başarısız oldu") || lower.includes("tum donusturme")) {
+        // The backend sends a detailed multi-line guide. Parse it into steps.
+        const lines = message.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+        for (const line of lines) {
+          if (!steps.some(s => s === line)) {
+            steps.push(line);
+          }
+        }
+        // Return early — the backend message already contains everything.
+        return { title: "Dosya Dönüştürme Hatası", message: lines[0] || message, steps };
+      }
+
+      if (lower.includes("pymupdf") || lower.includes("fitz")) {
+        steps.push("PyMuPDF eksik. Terminalde: pip install pymupdf");
+        steps.push("Uygulamayı yeniden başlatın.");
+      }
+
+      if (lower.includes("python-pptx")) {
+        steps.push("python-pptx eksik. Terminalde: pip install python-pptx");
+        steps.push("Uygulamayı yeniden başlatın.");
+      }
+
+      if (lower.includes("pywin32")) {
+        steps.push("pywin32 eksik. Terminalde: pip install pywin32");
+        steps.push("Uygulamayı yeniden başlatın.");
+      }
+
+      if (lower.includes("bucket")) {
+        steps.push("Sunum için 'Sunum Dosyası Ekle', müzik için 'Müzik Medyası Ekle' kullanın.");
+      }
+
+      if (lower.includes("sadece resim") || lower.includes("sadece ses") || lower.includes("desteklenmez")) {
+        steps.push("Desteklenen dosya türlerini kullanın.");
+        steps.push("Uzantıların doğru olduğundan emin olun (.jpg, .png, .mp4, .mp3 vb.).");
+      }
+
+      if (lower.includes("empty file") || lower.includes("boş dosya")) {
+        steps.push("Dosyayı yeniden seçin ve tekrar yükleyin.");
+        steps.push("Dosya taşınıyorsa kopyalanmasının bittiğinden emin olun.");
+      }
+
+      if (!steps.length) {
+        if (status === 500) {
+          steps.push("Sunucu tarafında teknik bir hata oluştu.");
+          steps.push("Hata detayı terminal çıktısında veya Q-Slidee.log dosyasındadır.");
+          steps.push("Lütfen terminaldeki hata mesajını geliştiriciye iletin.");
+        }
+        steps.push("İşlemi tekrar deneyin.");
+        steps.push("Uygulamayı kapatıp yeniden başlatın.");
+      }
+
+      let title = "İşlem Hatası";
+      if (context === "upload") title = "Yükleme Hatası";
+      if (context === "ppt") title = "Sunum Hatası";
+      if (context === "media") title = "Medya Hatası";
+      if (context === "system") title = "Sistem Hatası";
+
+      return { title, message, steps };
+    }
+
+    function formatBytes(bytes) {
+      if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+      const units = ["B", "KB", "MB", "GB"];
+      let size = bytes;
+      let idx = 0;
+      while (size >= 1024 && idx < units.length - 1) {
+        size /= 1024;
+        idx += 1;
+      }
+      return `${size.toFixed(size >= 10 || idx === 0 ? 0 : 1)} ${units[idx]}`;
+    }
+
+    async function requestOnce(url, options) {
+      try {
+        const response = await fetch(url, options || undefined);
+        if (response.ok) return { ok: true, response };
+        const detail = await readResponseDetail(response);
+        return { ok: false, response, status: response.status, detail };
+      } catch (err) {
+        const message = err && err.message ? err.message : String(err);
+        return { ok: false, response: null, status: 0, detail: message };
+      }
+    }
+
+    function buildDoctorError(context, status, detail) {
+      const err = new Error(detail || `HTTP ${status || 0}`);
+      err.context = context;
+      err.status = status || 0;
+      err.detail = detail || "";
+      return err;
+    }
+
+    async function attemptFix(url, options, info) {
+      const shouldRetry = info.status === 0 || info.status >= 500;
+      if (!shouldRetry) return null;
+      await new Promise(resolve => setTimeout(resolve, 400));
+      const retry = await requestOnce(url, options);
+      return retry.ok ? retry.response : null;
+    }
+
+    async function doctorFetch(url, options, context, alternativeHandler) {
+      const first = await requestOnce(url, options);
+      if (first.ok) return { response: first.response, handled: false };
+
+      const fixed = await attemptFix(url, options, first);
+      if (fixed) return { response: fixed, handled: false };
+
+      if (alternativeHandler) {
+        const alt = await alternativeHandler(first);
+        if (alt && alt.handled) return { response: alt.response || null, handled: true };
+      }
+
+      throw buildDoctorError(context, first.status, first.detail);
+    }
+
+    function handleDoctorError(err, context) {
+      const status = err && typeof err.status === "number" ? err.status : 0;
+      const detail = err && err.detail ? err.detail : (err && err.message ? err.message : "");
+      const help = buildHelpForError(context, status, detail);
+      showErrorPopup(help.title, help.message, help.steps);
+    }
+
+    async function refreshStateOnce() {
+      const result = await requestOnce("/api/state");
+      if (!result.ok || !result.response) return false;
+      const data = await result.response.json();
+      currentMainId = data.current_media ? data.current_media.id : null;
+      currentBgmId = data.bgm_media ? data.bgm_media.id : null;
+      if (typeof data.bgm_volume === "number") {
+        bgmVolumeEl.value = String(Math.round(data.bgm_volume * 100));
+        bgmVolumeTextEl.textContent = `${bgmVolumeEl.value}%`;
+      }
+      return true;
+    }
+
+    function mediaNameById(id) {
+      const item = mediaItems.find(x => x.id === id);
+      return item ? item.name : "Yok";
+    }
+
+    function updateBgmLabel() {
+      bgmLabelEl.textContent = `Secili Muzik: ${mediaNameById(currentBgmId)}`;
+    }
+
+    function updateVideoControlsVisibility(currentMedia = null) {
+      const activeMedia = currentMedia || mediaItems.find((item) => item.id === currentMainId) || null;
+      const shouldShow = !!(activeMedia && activeMedia.type === "video");
+      videoControlsPanelEl.classList.toggle("hidden", !shouldShow);
+    }
+
+    function updateMusicPanelVisibility() {
+      const hasMusicMedia = mediaItems.some((item) => (item.bucket || (item.type === "audio" ? "music" : "presentation")) === "music");
+      musicPanelEl.classList.toggle("hidden", !hasMusicMedia);
+    }
+
+    function closeCardMenu() {
+      openMenuId = null;
+      renderLibrary();
+    }
+
+    function toggleCardMenu(mediaId) {
+      openMenuId = openMenuId === mediaId ? null : mediaId;
+      renderLibrary();
+    }
+
+    function buildCard(item, mode) {
+      const card = document.createElement("div");
+      card.className = "card";
+      if (item.id === currentMainId) card.classList.add("active-main");
+      if (item.id === currentBgmId) card.classList.add("active-bgm");
+
+      const thumb = document.createElement("div");
+      thumb.className = "thumb";
+      if (item.type === "image") {
+        const img = document.createElement("img");
+        img.src = item.url;
+        img.alt = item.name;
+        img.loading = "lazy";
+        img.decoding = "async";
+        thumb.appendChild(img);
+      } else if (item.type === "video") {
+        const vid = document.createElement("video");
+        vid.src = item.url;
+        vid.muted = true;
+        vid.preload = "metadata";
+        vid.playsInline = true;
+        vid.disablePictureInPicture = true;
+        thumb.appendChild(vid);
+      } else {
+        thumb.textContent = "AUDIO";
+      }
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent = `${item.type.toUpperCase()} - ${item.name}`;
+      card.title = mode === "presentation" ? "Tikla ve yansit" : "Tikla ve muzik sec";
+      card.onclick = () => {
+        if (mode === "presentation") {
+          showMainMedia(item.id);
+          if (item.type === "pdf") {
+            // Scroll to top when switching to a PDF
+            syncScroll(0);
+          }
+        }
+        if (mode === "music") selectBgm(item.id);
+      };
+
+      const menuBtn = document.createElement("button");
+      menuBtn.type = "button";
+      menuBtn.className = "card-menu-btn";
+      menuBtn.textContent = "...";
+      menuBtn.title = "Medya işlemleri";
+      menuBtn.onclick = (event) => {
+        event.stopPropagation();
+        toggleCardMenu(item.id);
+      };
+
+      card.appendChild(thumb);
+      card.appendChild(menuBtn);
+      card.appendChild(meta);
+
+      if (openMenuId === item.id) {
+        const menu = document.createElement("div");
+        menu.className = "card-menu";
+        menu.onclick = (event) => event.stopPropagation();
+
+        if (item.type === "video" && (item.bucket || "presentation") !== "music") {
+          const moveBtn = document.createElement("button");
+          moveBtn.type = "button";
+          moveBtn.textContent = "Videoyu Muzige Tasi";
+          moveBtn.onclick = (event) => {
+            event.stopPropagation();
+            moveMediaToMusic(item.id);
+          };
+          menu.appendChild(moveBtn);
+        }
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "btn-danger";
+        removeBtn.textContent = "Medyayi Kaldir";
+        removeBtn.onclick = (event) => {
+          event.stopPropagation();
+          deleteMediaItem(item.id, item.name);
+        };
+        menu.appendChild(removeBtn);
+        card.appendChild(menu);
+      }
+
+      return card;
+    }
+
+    function buildDeckCard(deck, isActive) {
+      const card = document.createElement("div");
+      card.className = "card";
+      if (isActive) card.classList.add("active-main");
+
+      const thumb = document.createElement("div");
+      thumb.className = "thumb";
+      if (deck.preview_src) {
+        const img = document.createElement("img");
+        img.src = deck.preview_src;
+        img.alt = deck.name || "Sunum";
+        img.loading = "lazy";
+        img.decoding = "async";
+        thumb.appendChild(img);
+      } else {
+        thumb.textContent = "SUNUM";
+      }
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent = `SUNUM - ${deck.name} (${deck.slide_count} slayt)`;
+
+      card.title = "Tıkla ve sunumu etkinleştir";
+      card.onclick = () => selectPptDeckById(deck.id);
+
+      card.appendChild(thumb);
+      card.appendChild(meta);
+      return card;
+    }
+
+    function renderLibrary() {
+      presentationLibraryEl.innerHTML = "";
+      musicLibraryEl.innerHTML = "";
+      const presentationFrag = document.createDocumentFragment();
+      const musicFrag = document.createDocumentFragment();
+
+      for (const item of mediaItems) {
+        const bucket = item.bucket || (item.type === "audio" ? "music" : "presentation");
+        if (bucket === "presentation") {
+          presentationFrag.appendChild(buildCard(item, "presentation"));
+        }
+        if (bucket === "music") {
+          musicFrag.appendChild(buildCard(item, "music"));
+        }
+      }
+      const decks = pptState.decks || [];
+      const activeDeckId = pptState.active_deck_id || "";
+      for (const deck of decks) {
+        presentationFrag.appendChild(buildDeckCard(deck, deck.id === activeDeckId));
+      }
+      presentationLibraryEl.appendChild(presentationFrag);
+      musicLibraryEl.appendChild(musicFrag);
+      updateBgmLabel();
+      updateMusicPanelVisibility();
+      updateVideoControlsVisibility();
+    }
+
+    function renderPptState() {
+      const decks = pptState.decks || [];
+      const activeDeckId = pptState.active_deck_id || "";
+      const activeDeck = decks.find(d => d.id === activeDeckId) || null;
+
+      pptDeckSelectEl.innerHTML = "";
+      const defaultOption = document.createElement("option");
+      defaultOption.value = "";
+      defaultOption.textContent = decks.length ? "Sunum secin" : "Yüklü sunum yok";
+      pptDeckSelectEl.appendChild(defaultOption);
+
+      for (const deck of decks) {
+        const opt = document.createElement("option");
+        opt.value = deck.id;
+        opt.textContent = `${deck.name} (${deck.slide_count} slayt)`;
+        if (deck.id === activeDeckId) opt.selected = true;
+        pptDeckSelectEl.appendChild(opt);
+      }
+
+      if (activeDeck) {
+        const slideIndex = Number.isFinite(activeDeck.current_index) ? activeDeck.current_index + 1 : 1;
+        const total = activeDeck.slide_count || 0;
+        pptInfoEl.textContent = `Aktif Sunum: ${activeDeck.name} - Slayt ${slideIndex}/${total}`;
+      } else {
+        pptInfoEl.textContent = "Aktif Sunum: Yok";
+      }
+    }
+
+    async function fetchPpt() {
+      try {
+        const result = await doctorFetch("/api/ppt", null, "ppt", makeRetryHandler("/api/ppt", null));
+        if (!result.response) return;
+        const response = result.response;
+        const data = await response.json();
+        pptState = {
+          decks: data.decks || [],
+          active_deck_id: data.active_deck_id || null,
+          active_slide_index: data.active_slide_index ?? null,
+        };
+        renderPptState();
+      } catch (err) {
+        handleDoctorError(err, "ppt");
+        setStatus(`Sunum listesi hatası: ${err.message}`);
+      }
+    }
+
+    async function fetchState() {
+      try {
+        const result = await doctorFetch("/api/state", null, "media", makeRetryHandler("/api/state", null));
+        if (!result.response) return;
+        const response = result.response;
+        const data = await response.json();
+        currentMainId = data.current_media ? data.current_media.id : null;
+        currentBgmId = data.bgm_media ? data.bgm_media.id : null;
+        if (typeof data.bgm_volume === "number") {
+          bgmVolumeEl.value = String(Math.round(data.bgm_volume * 100));
+          bgmVolumeTextEl.textContent = `${bgmVolumeEl.value}%`;
+        }
+        
+        // Update Preview Frame or PDF View
+        const currentMedia = data.current_media;
+        const currentPptSlide = data.current_ppt_slide;
+        const previewFrame = document.getElementById("previewFrame");
+        updateVideoControlsVisibility(currentMedia);
+        
+        const isPptShown = !!data.current_ppt_slide;
+        const pptSectionEl = document.getElementById("pptSection");
+        if (pptSectionEl) {
+          pptSectionEl.classList.toggle("hidden", !isPptShown);
+        }
+
+        const docView = document.getElementById("pdfDocView");
+        if (docView) docView.remove();
+        currentPdfMediaId = null;
+        currentPdfScrollPct = 0;
+        previewFrame.style.display = "block";
+
+        function formatTime(sec) {
+          if (!sec || isNaN(sec)) return "00:00";
+          const m = Math.floor(sec / 60);
+          const s = Math.floor(sec % 60);
+          return m.toString().padStart(2, "0") + ":" + s.toString().padStart(2, "0");
+        }
+
+        // Sync Video UI
+        const videoAction = data.video_control ? data.video_control.action : "none";
+        const videoToggleBtn = document.getElementById("videoToggle");
+        if (videoToggleBtn) {
+          videoToggleBtn.textContent = (videoAction === "play") ? "Video Duraklat" : "Video Oynat";
+        }
+        const videoSeek = document.getElementById("videoSeek");
+        const videoTimeText = document.getElementById("videoTimeText");
+        if (videoSeek && videoTimeText && typeof data.video_pos === "number" && typeof data.video_dur === "number") {
+          videoSeek.max = Math.floor(data.video_dur);
+          if (!videoSeek.dataset.dragging) {
+            videoSeek.value = Math.floor(data.video_pos);
+          }
+          videoTimeText.textContent = `${formatTime(data.video_pos)} / ${formatTime(data.video_dur)}`;
+        }
+
+        // Sync BGM UI
+        const bgmAction = data.bgm_control ? data.bgm_control.action : "none";
+        const bgmToggleBtn = document.getElementById("bgmToggle");
+        if (bgmToggleBtn) {
+          bgmToggleBtn.textContent = (bgmAction === "play") ? "Müzik Duraklat" : "Müzik Oynat";
+        }
+        const bgmSeek = document.getElementById("bgmSeek");
+        const bgmTimeText = document.getElementById("bgmTimeText");
+        if (bgmSeek && bgmTimeText && typeof data.bgm_pos === "number" && typeof data.bgm_dur === "number") {
+          bgmSeek.max = Math.floor(data.bgm_dur);
+          if (!bgmSeek.dataset.dragging) {
+            bgmSeek.value = Math.floor(data.bgm_pos);
+          }
+          bgmTimeText.textContent = `${formatTime(data.bgm_pos)} / ${formatTime(data.bgm_dur)}`;
+        }
+      } catch (err) {
+        handleDoctorError(err, "media");
+        setStatus(`Durum okuma hatası: ${err.message}`);
+        updateVideoControlsVisibility(null);
+        const pptSectionEl = document.getElementById("pptSection");
+        if (pptSectionEl) pptSectionEl.classList.add("hidden");
+      }
+    }
+
+    async function fetchMedia() {
+      try {
+        const result = await doctorFetch("/api/media", null, "media", makeRetryHandler("/api/media", null));
+        if (!result.response) return;
+        const response = result.response;
+        const data = await response.json();
+        mediaItems = data.items || [];
+        await fetchState();
+        await fetchPpt();
+        renderLibrary();
+        setStatus(`Toplam medya: ${mediaItems.length}`);
+      } catch (err) {
+        handleDoctorError(err, "media");
+        setStatus(`Medya listesi hatası: ${err.message}`);
+      }
+    }
+
+
+    async function selectPptDeckById(deckId) {
+      const cleanId = (deckId || "").trim();
+      if (!cleanId) {
+        setStatus("Lütfen sunum seçiniz");
+        return;
+      }
+      try {
+        const url = "/api/ppt/select";
+        const options = {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ deck_id: cleanId }),
+        };
+        const result = await doctorFetch(url, options, "ppt", makeRetryHandler(url, options));
+        if (!result.response) return;
+        await fetchMedia();
+        setStatus("Sunum aktif edildi");
+      } catch (err) {
+        handleDoctorError(err, "ppt");
+        setStatus(`Sunum seçim hatası: ${err.message}`);
+      }
+    }
+
+    async function selectPptDeck() {
+      return selectPptDeckById(pptDeckSelectEl.value || "");
+    }
+
+    async function stepPpt(direction) {
+      const endpoint = direction === "next" ? "/api/ppt/next" : "/api/ppt/prev";
+      try {
+        const result = await doctorFetch(endpoint, { method: "POST" }, "ppt", makeRetryHandler(endpoint, { method: "POST" }));
+        if (!result.response) return;
+        await fetchMedia();
+        setStatus(direction === "next" ? "Sonraki slayt" : "Önceki slayt");
+      } catch (err) {
+        handleDoctorError(err, "ppt");
+        setStatus(`Slayt kontrol hatası: ${err.message}`);
+      }
+    }
+
+    async function showMainMedia(id) {
+      try {
+        const url = "/api/media/show";
+        const options = {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ media_id: id }),
+        };
+        const result = await doctorFetch(url, options, "media", makeRetryHandler(url, options));
+        if (!result.response) return;
+        await fetchState();
+        renderLibrary();
+        setStatus("Ana ekran medyası güncellendi");
+      } catch (err) {
+        handleDoctorError(err, "media");
+        setStatus(`Yansıtma hatası: ${err.message}`);
+      }
+    }
+
+    async function selectBgm(id) {
+      try {
+        const url = "/api/bgm/set";
+        const options = {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ media_id: id }),
+        };
+        const result = await doctorFetch(url, options, "media", makeRetryHandler(url, options));
+        if (!result.response) return;
+        currentBgmId = id;
+        updateMusicPanelVisibility();
+        renderLibrary();
+        setStatus("Müzik seçildi");
+      } catch (err) {
+        handleDoctorError(err, "media");
+        setStatus(`Müzik seçim hatası: ${err.message}`);
+      }
+    }
+
+    async function moveMediaToMusic(id) {
+      try {
+        const url = "/api/media/move";
+        const options = {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ media_id: id, bucket: "music" }),
+        };
+        const result = await doctorFetch(url, options, "media", makeRetryHandler(url, options));
+        if (!result.response) return;
+        openMenuId = null;
+        await fetchMedia();
+        setStatus("Video muzige tasindi");
+      } catch (err) {
+        handleDoctorError(err, "media");
+        setStatus(`Medya taşıma hatası: ${err.message}`);
+      }
+    }
+
+    async function deleteMediaItem(id, name) {
+      const confirmed = window.confirm(`${name || "Bu medya"} kaldırılsın mı?`);
+      if (!confirmed) return;
+      try {
+        const url = "/api/media/delete";
+        const options = {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ media_id: id }),
+        };
+        const result = await doctorFetch(url, options, "media", makeRetryHandler(url, options));
+        if (!result.response) return;
+        openMenuId = null;
+        if (currentMainId === id) currentMainId = null;
+        if (currentBgmId === id) currentBgmId = null;
+        await fetchMedia();
+        setStatus("Medya kaldırıldı");
+      } catch (err) {
+        handleDoctorError(err, "media");
+        setStatus(`Medya kaldırma hatası: ${err.message}`);
+      }
+    }
+
+    async function sendVideoControl(action, time = null) {
+      try {
+        const url = "/api/video/control";
+        const payload = { action };
+        if (time !== null) payload.time = time;
+        const options = {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        };
+        const result = await doctorFetch(url, options, "media", makeRetryHandler(url, options));
+        if (!result.response) return;
+        setStatus(`Video komutu: ${action}`);
+        await fetchState();
+      } catch (err) {
+        handleDoctorError(err, "media");
+        setStatus(`Video kontrol hatası: ${err.message}`);
+      }
+    }
+
+    let lastSyncTime = 0;
+    const SYNC_THROTTLE_MS = 100;
+
+    async function syncScroll(pct) {
+      const now = Date.now();
+      if (now - lastSyncTime < SYNC_THROTTLE_MS && pct > 0 && pct < 1) return;
+      lastSyncTime = now;
+      try {
+        const url = "/api/scroll/sync";
+        const options = {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pct: pct }),
+        };
+        // Don't use doctorFetch here to avoid UI flicker on rapid scrolls
+        await fetch(url, options);
+      } catch (err) {
+        console.error("Scroll sync error", err);
+      }
+    }
+
+    function onPdfScroll(event) {
+      const el = event.target;
+      const total = el.scrollHeight - el.clientHeight;
+      if (total <= 0) return;
+      const pct = el.scrollTop / total;
+      if (!Number.isFinite(pct)) return;
+      currentPdfScrollPct = pct;
+      syncScroll(pct);
+    }
+
+    function restorePdfScrollPosition() {
+      const docView = document.getElementById("pdfDocView");
+      if (!docView) return;
+      const total = docView.scrollHeight - docView.clientHeight;
+      if (total <= 0) return;
+      const pct = Math.max(0, Math.min(1, currentPdfScrollPct || 0));
+      docView.scrollTop = pct * total;
+    }
+
+    function renderHostPdfView(media) {
+      const previewFrame = document.getElementById("previewFrame");
+      
+      let docView = document.getElementById("pdfDocView");
+      if (!docView) {
+        docView = document.createElement("div");
+        docView.id = "pdfDocView";
+        docView.className = "doc-wrap";
+        docView.onscroll = onPdfScroll;
+        // Insert after frame
+        previewFrame.parentNode.insertBefore(docView, previewFrame.nextSibling);
+      }
+
+      if (currentPdfMediaId === media.id) {
+        return;
+      }
+      
+      const pages = media.pages || [media.url];
+      docView.innerHTML = "";
+      currentPdfScrollPct = 0;
+      for (const pageUrl of pages) {
+        const img = document.createElement("img");
+        img.className = "doc-page";
+        img.src = pageUrl;
+        img.loading = "eager";
+        img.decoding = "async";
+        img.addEventListener("load", () => {
+          if (currentPdfMediaId === media.id) {
+            restorePdfScrollPosition();
+          }
+        });
+        docView.appendChild(img);
+      }
+      docView.scrollTop = 0;
+      currentPdfMediaId = media.id;
+    }
+
+    async function sendBgmControl(action, volume = null, time = null) {
+      try {
+        const url = "/api/bgm/control";
+        const payload = { action };
+        if (volume !== null) payload.volume = volume;
+        if (time !== null) payload.time = time;
+        const options = {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        };
+        const result = await doctorFetch(url, options, "media", makeRetryHandler(url, options));
+        if (!result.response) return;
+        setStatus(`Bgm komutu: ${action}`);
+        await fetchState();
+      } catch (err) {
+        handleDoctorError(err, "media");
+        setStatus(`Bgm kontrol hatası: ${err.message}`);
+      }
+    }
+
+    function isSupportedFile(file, bucket) {
+      const name = (file && file.name ? file.name : "").toLowerCase();
+      const dot = name.lastIndexOf(".");
+      const ext = dot >= 0 ? name.slice(dot) : "";
+      const mime = file && file.type ? file.type.toLowerCase() : "";
+
+      if (bucket === "music") {
+        if (mime.startsWith("audio/") || mime.startsWith("video/")) return true;
+        if (AUDIO_EXTS.has(ext) || VIDEO_EXTS.has(ext)) return true;
+        return false;
+      }
+
+      if (mime.startsWith("image/") || mime.startsWith("video/") || mime.startsWith("audio/")) return true;
+      if (IMAGE_EXTS.has(ext) || VIDEO_EXTS.has(ext) || AUDIO_EXTS.has(ext)) return true;
+      if (DOC_EXTS.has(ext)) return true;
+      return false;
+    }
+
+    function showDropWarning(targetEl, bucket, unsupported) {
+      if (!targetEl) return;
+      if (!unsupported.length) {
+        targetEl.textContent = "";
+        targetEl.classList.add("hidden");
+        return;
+      }
+      const limit = 4;
+      const names = unsupported.slice(0, limit).map(file => file.name || "Dosya");
+      const extra = unsupported.length > limit ? ` (+${unsupported.length - limit} adet daha)` : "";
+      const bucketText = bucket === "music" ? "Müzik" : "Yükleme";
+      targetEl.textContent = `${bucketText} alanı bu dosyaları desteklemiyor: ${names.join(", ")}${extra}`;
+      targetEl.classList.remove("hidden");
+      clearTimeout(targetEl._autoHideTimer);
+      targetEl._autoHideTimer = setTimeout(() => {
+        targetEl.classList.add("hidden");
+        targetEl.textContent = "";
+      }, 5000);
+    }
+
+    function setUploadErrors(panelEl, errors) {
+      if (!panelEl) return;
+      const listEl = panelEl.querySelector(".upload-errors-list");
+      if (!errors || !errors.length) {
+        panelEl.classList.add("hidden");
+        if (listEl) listEl.innerHTML = "";
+        return;
+      }
+      if (listEl) {
+        listEl.innerHTML = "";
+        for (const err of errors) {
+          const li = document.createElement("li");
+          li.textContent = err;
+          listEl.appendChild(li);
+        }
+      }
+      panelEl.classList.remove("hidden");
+    }
+
+    function uploadFileWithProgress(endpoint, file, onProgress) {
+      return new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", endpoint, true);
+        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+        xhr.setRequestHeader("X-Filename", file.name);
+
+        xhr.upload.addEventListener("progress", (event) => {
+          if (event.lengthComputable && onProgress) {
+            onProgress(event.loaded);
+          } else if (onProgress && Number.isFinite(file.size)) {
+            onProgress(Math.min(file.size, event.loaded || 0));
+          }
+        });
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve({ ok: true, status: xhr.status, detail: "" });
+            return;
+          }
+          const detail = parseErrorDetail(xhr.responseText || "");
+          resolve({ ok: false, status: xhr.status, detail });
+        };
+
+        xhr.onerror = () => {
+          resolve({ ok: false, status: 0, detail: "Ağ hatası" });
+        };
+
+        xhr.ontimeout = () => {
+          resolve({ ok: false, status: 0, detail: "Yükleme zaman aşımına uğradı" });
+        };
+
+        xhr.send(file);
+      });
+    }
+
+    function getUploadTarget(file, defaultBucket) {
+      const name = (file && file.name ? file.name : "").toLowerCase();
+      const dot = name.lastIndexOf(".");
+      const ext = dot >= 0 ? name.slice(dot) : "";
+      const mime = file && file.type ? file.type.toLowerCase() : "";
+      const isDoc = [".pptx", ".docx", ".xlsx", ".xls"].includes(ext);
+      const isPdf = ext === ".pdf";
+      const isAudio = mime.startsWith("audio/") || AUDIO_EXTS.has(ext);
+      const bucket = defaultBucket === "music" ? "music" : (isAudio ? "music" : "presentation");
+      return { bucket, isDoc, isPdf };
+    }
+
+    async function uploadFilesList(files, sourceLabel, bucket) {
+      const fileList = Array.from(files || []);
+      if (!fileList.length) {
+        setStatus(`Lütfen en az bir dosya seçiniz (${sourceLabel})`);
+        return;
+      }
+
+      uploadBtn.disabled = true;
+      const errorPanelEl = presentationUploadErrorsEl;
+      setUploadErrors(errorPanelEl, []);
+      setStatus(`${sourceLabel} yükleniyor... (${fileList.length} dosya)`);
+
+      const errors = [];
+      let successCount = 0;
+      const totalBytes = fileList.reduce((sum, file) => sum + (Number.isFinite(file.size) ? file.size : 0), 0);
+      let completedBytes = 0;
+      setUploadProgress(`${sourceLabel} yükleniyor`, 0, totalBytes);
+      try {
+        for (const file of fileList) {
+          const { bucket: targetBucket, isDoc, isPdf } = getUploadTarget(file, bucket);
+
+          if (targetBucket === "music" && (isDoc || isPdf)) {
+            errors.push(`${file.name}: dokümanlar müzik bölümüne yüklenemez`);
+            continue;
+          }
+
+          let endpoint;
+          if (isDoc) {
+            endpoint = `/api/ppt/upload?filename=${encodeURIComponent(file.name)}`;
+          } else {
+            endpoint = `/api/media/upload?filename=${encodeURIComponent(file.name)}&bucket=${encodeURIComponent(targetBucket)}`;
+          }
+
+          const result = await uploadFileWithProgress(endpoint, file, (loaded) => {
+            setUploadProgress(`${sourceLabel} yükleniyor`, completedBytes + loaded, totalBytes);
+          });
+          if (result.ok) {
+            successCount += 1;
+            completedBytes += Number.isFinite(file.size) ? file.size : 0;
+            setUploadProgress(`${sourceLabel} yükleniyor`, completedBytes, totalBytes);
+          } else {
+            errors.push(`${file.name}: ${result.detail || `HTTP ${result.status}`}`);
+          }
+        }
+        await fetchMedia();
+        if (!errors.length) {
+          setStatus(`${sourceLabel} eklendi (${successCount})`);
+        } else {
+          console.error("Yükleme hataları:", errors);
+          setStatus(`${sourceLabel} eklendi (${successCount}), ${errors.length} hata`);
+        }
+      } catch (err) {
+        setStatus(`Yükleme hatası: ${err.message}`);
+      } finally {
+        hideUploadProgress();
+        uploadBtn.disabled = false;
+        setUploadErrors(errorPanelEl, errors);
+      }
+    }
+
+    async function uploadFilesFromInput(inputEl, sourceLabel, bucket) {
+      const files = Array.from(inputEl.files || []);
+      if (!files.length) {
+        setStatus(`Lütfen en az bir dosya seçiniz (${sourceLabel})`);
+        return;
+      }
+
+      try {
+        await uploadFilesList(files, sourceLabel, bucket);
+      } finally {
+        inputEl.value = "";
+        updateFileLabel(inputEl);
+      }
+    }
+
+    function updateFileLabel(inputEl) {
+      const count = inputEl.files ? inputEl.files.length : 0;
+      if (inputEl === filesEl) {
+        filesLabelEl.textContent = count ? `${count} dosya seçildi` : "Dosya seçilmedi.";
+      }
+    }
+
+    function bindFilePicker(inputEl, buttonEl, sourceLabel, bucket) {
+      buttonEl.addEventListener("click", () => {
+        inputEl.click();
+      });
+      inputEl.addEventListener("change", () => {
+        updateFileLabel(inputEl);
+        if (inputEl.files && inputEl.files.length) {
+          uploadFilesFromInput(inputEl, sourceLabel, bucket);
+        }
+      });
+    }
+
+    function bindDropZone(zoneEl, sourceLabel, bucket) {
+      if (!zoneEl) return;
+      const setActive = (active) => zoneEl.classList.toggle("drag-active", active);
+      const warningEl = presentationDropWarningEl;
+
+      zoneEl.addEventListener("dragenter", (event) => {
+        event.preventDefault();
+        setActive(true);
+      });
+
+      zoneEl.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        setActive(true);
+      });
+
+      zoneEl.addEventListener("dragleave", (event) => {
+        if (event.target === zoneEl) {
+          setActive(false);
+        }
+      });
+
+      zoneEl.addEventListener("drop", (event) => {
+        event.preventDefault();
+        setActive(false);
+        const droppedFiles = event.dataTransfer ? event.dataTransfer.files : null;
+        if (!droppedFiles || !droppedFiles.length) {
+          setStatus(`Sürükle-bırak ile dosya bulunamadı (${sourceLabel})`);
+          return;
+        }
+        const list = Array.from(droppedFiles);
+        const supported = [];
+        const unsupported = [];
+        for (const file of list) {
+          if (isSupportedFile(file, bucket)) supported.push(file);
+          else unsupported.push(file);
+        }
+        showDropWarning(warningEl, bucket, unsupported);
+        if (!supported.length) {
+          setStatus(`Desteklenen dosya bulunamadı (${sourceLabel})`);
+          return;
+        }
+        uploadFilesList(supported, sourceLabel, bucket);
+      });
+    }
+
+    function togglePreviewPanel() {
+      const willClose = !previewPanelEl.classList.contains("collapsed");
+      previewPanelEl.classList.toggle("collapsed", willClose);
+      togglePreviewBtn.textContent = willClose ? "Ön Izlemeyi Aç" : "Ön Izlemeyi Kapat";
+      setStatus(willClose ? "Ön izleme paneli kapatıldı" : "Ön izleme paneli açıldı");
+    }
+
+    bindFilePicker(filesEl, uploadBtn, "Dosyalar", "presentation");
+    bindDropZone(presentationDropEl, "Dosyalar", "presentation");
+    
+    // Core Button Listeners
+    refreshBtn.addEventListener("click", fetchMedia);
+    if (document.getElementById("pptSelect")) {
+      document.getElementById("pptSelect").addEventListener("click", selectPptDeck);
+    }
+    if (document.getElementById("pptPrev")) {
+      document.getElementById("pptPrev").addEventListener("click", () => stepPpt("prev"));
+    }
+    if (document.getElementById("pptNext")) {
+      document.getElementById("pptNext").addEventListener("click", () => stepPpt("next"));
+    }
+    togglePreviewBtn.addEventListener("click", togglePreviewPanel);
+    errorCloseBtn.addEventListener("click", hideErrorPopup);
+    errorModalEl.addEventListener("click", (event) => {
+      if (event.target === errorModalEl) hideErrorPopup();
+    });
+    
+    // Video Controls
+    const videoToggleBtn = document.getElementById("videoToggle");
+    if (videoToggleBtn) {
+      videoToggleBtn.addEventListener("click", async () => {
+        const isPlaying = videoToggleBtn.textContent.includes("Duraklat");
+        await sendVideoControl(isPlaying ? "pause" : "play");
+      });
+    }
+    const videoRestartBtn = document.getElementById("videoRestart");
+    if (videoRestartBtn) {
+      videoRestartBtn.addEventListener("click", () => sendVideoControl("restart"));
+    }
+    const videoSeekEl = document.getElementById("videoSeek");
+    if (videoSeekEl) {
+      const handleSeek = () => {
+        delete videoSeekEl.dataset.dragging;
+        sendVideoControl("seek", Number(videoSeekEl.value));
+      };
+      videoSeekEl.addEventListener("mousedown", () => { videoSeekEl.dataset.dragging = "1"; });
+      videoSeekEl.addEventListener("mouseup", handleSeek);
+      videoSeekEl.addEventListener("touchstart", () => { videoSeekEl.dataset.dragging = "1"; });
+      videoSeekEl.addEventListener("touchend", handleSeek);
+    }
+
+    // Music Controls
+    const bgmToggleBtn = document.getElementById("bgmToggle");
+    if (bgmToggleBtn) {
+      bgmToggleBtn.addEventListener("click", async () => {
+        const isPlaying = bgmToggleBtn.textContent.includes("Duraklat");
+        await sendBgmControl(isPlaying ? "pause" : "play");
+      });
+    }
+    const bgmRestartBtn = document.getElementById("bgmRestart");
+    if (bgmRestartBtn) {
+      bgmRestartBtn.addEventListener("click", () => sendBgmControl("restart"));
+    }
+    const bgmStopBtn = document.getElementById("bgmStop");
+    if (bgmStopBtn) {
+      bgmStopBtn.addEventListener("click", () => sendBgmControl("stop"));
+    }
+    const bgmSeekEl = document.getElementById("bgmSeek");
+    if (bgmSeekEl) {
+      const handleBgmSeek = () => {
+        delete bgmSeekEl.dataset.dragging;
+        sendBgmControl("seek", null, Number(bgmSeekEl.value));
+      };
+      bgmSeekEl.addEventListener("mousedown", () => { bgmSeekEl.dataset.dragging = "1"; });
+      bgmSeekEl.addEventListener("mouseup", handleBgmSeek);
+      bgmSeekEl.addEventListener("touchstart", () => { bgmSeekEl.dataset.dragging = "1"; });
+      bgmSeekEl.addEventListener("touchend", handleBgmSeek);
+    }
+
+    bgmVolumeEl.addEventListener("input", () => {
+      const percent = Number(bgmVolumeEl.value || "0");
+      bgmVolumeTextEl.textContent = `${percent}%`;
+      sendBgmControl("volume", percent / 100);
+    });
+
+    filesEl.addEventListener("change", uploadFiles);
+    themeSelectEl.addEventListener("change", () => applyTheme(themeSelectEl.value));
+
+    document.addEventListener("click", (e) => {
+      if (openMenuId && !e.target.closest(".menu-wrap")) {
+        toggleMenu(openMenuId);
+      }
+    });
+
+    window.addEventListener("error", (event) => {
+      const message = event && event.message ? event.message : "Bilinmeyen hata.";
+      const help = buildHelpForError("ui", 0, message);
+      showErrorPopup(help.title, help.message, help.steps);
+    });
+
+    window.addEventListener("unhandledrejection", (event) => {
+      const message = event && event.reason ? String(event.reason) : "Bilinmeyen hata.";
+      const help = buildHelpForError("ui", 0, message);
+      showErrorPopup(help.title, help.message, help.steps);
+    });
+
+    // Viewer Actions
+    document.getElementById("openViewer").addEventListener("click", () => {
+      const viewerUrl = `${window.location.protocol}//${window.location.host}/`;
+      window.open(viewerUrl, "_blank");
+      setStatus("İzleyici yeni sekmede açıldı");
+    });
+
+    document.getElementById("copyViewerUrl").addEventListener("click", async () => {
+      const viewerUrl = `${window.location.protocol}//${window.location.host}/`;
+      try {
+        await navigator.clipboard.writeText(viewerUrl);
+        setStatus("İzleyici URL'si kopyalandı!");
+      } catch (err) {
+        const input = document.createElement("input");
+        input.value = viewerUrl;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        document.body.removeChild(input);
+        setStatus("İzleyici URL'si kopyalandı!");
+      }
+    });
+
+    // System Status
+    const SYSTEM_STATUS_POLL_MS = 10000;
+    setInterval(checkSystemStatus, SYSTEM_STATUS_POLL_MS);
+    checkSystemStatus();
+
+    // Heartbeat for auto-shutdown
+    const hostClientId = "host_" + Date.now() + "_" + Math.random().toString(36).slice(2, 11);
+    const HEARTBEAT_INTERVAL_MS = 3000;
+
+    async function sendHeartbeat() {
+      try {
+        await fetch("/api/host/alive", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ client_id: hostClientId }),
+          keepalive: true,
+        });
+      } catch (err) { console.warn("Heartbeat gonderilemedi:", err); }
+    }
+
+    async function sendHostBye() {
+      try {
+        await fetch("/api/host/bye", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ client_id: hostClientId }),
+          keepalive: true,
+        });
+      } catch (err) { console.warn("Host bye gonderilemedi:", err); }
+    }
+
+    function startHeartbeat() {
+      sendHeartbeat();
+      setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
+    }
+
+    function stopHeartbeat() {
+      sendHostBye();
+    }
+
+    window.addEventListener("beforeunload", stopHeartbeat);
+    window.addEventListener("pagehide", stopHeartbeat);
+
+    function startPolling() {
+      if (pollTimer) return;
+      pollTimer = setInterval(fetchState, 1500);
+    }
+
+    // Initialize
+    applyTheme("dark");
+    themeSelectEl.value = "dark";
+    startHeartbeat();
+    startPolling();
+    fetchMedia();
+  </script>
+</body>
+
+</html>

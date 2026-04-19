@@ -6,4 +6,6 @@ __pycache__/
 *.log
 dist/
 build/
-app/media_uploads/
+data/media_uploads/
+.idea/
+.vscode/

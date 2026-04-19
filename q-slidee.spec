@@ -9,7 +9,7 @@ block_cipher = None
 project_dir = Path.cwd()
 
 datas = [
-    (str(project_dir / "app" / "web"), "app/web"),
+    (str(project_dir / "web"), "web"),
 ]
 
 hiddenimports = collect_submodules("uvicorn") + [
@@ -19,7 +19,7 @@ hiddenimports = collect_submodules("uvicorn") + [
 ]
 
 a = Analysis(
-    ["app/host.py"],
+    ["src/app/host.py"],
     pathex=[str(project_dir)],
     binaries=[],
     datas=datas,

@@ -6,13 +6,10 @@
   <title>Q-Slidee Izleyici</title>
   <style>
     :root {
-      --bg: #04070f;
-      --line: rgba(148, 163, 184, 0.25);
-      --muted: #94a3b8;
-      --text: #e5e7eb;
-      --accent: #66e3ff;
-      --accent-2: #9f7bff;
-      --accent-3: #4cffd9;
+      --bg: #000000;
+      --line: rgba(80, 80, 80, 0.3);
+      --muted: #666666;
+      --text: #cccccc;
     }
 
     * { box-sizing: border-box; }
@@ -20,7 +17,7 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background: radial-gradient(circle at top, #121a2b, var(--bg) 60%);
+      background: var(--bg);
       color: var(--text);
       font-family: "Segoe UI", Tahoma, sans-serif;
       display: grid;
@@ -36,23 +33,21 @@
     .empty {
       width: min(980px, 96%);
       min-height: 320px;
-      border: 1px dashed rgba(148, 163, 184, 0.2);
+      border: 1px solid rgba(50, 50, 50, 0.4);
       border-radius: 22px;
       display: grid;
       place-items: center;
       padding: 28px;
       position: relative;
       overflow: hidden;
-      background: linear-gradient(135deg, rgba(10, 18, 34, 0.7), rgba(9, 13, 26, 0.3));
-      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.05);
+      background: #0a0a0a;
     }
 
     .empty::before {
       content: "";
       position: absolute;
       inset: -40%;
-      background: radial-gradient(circle, rgba(102, 227, 255, 0.08), transparent 55%),
-        radial-gradient(circle at 70% 30%, rgba(159, 123, 255, 0.12), transparent 60%);
+      background: radial-gradient(circle, rgba(30, 30, 30, 0.6), transparent 55%);
       animation: glowShift 8s ease-in-out infinite;
       pointer-events: none;
     }
@@ -71,15 +66,11 @@
       font-size: clamp(2.6rem, 6vw, 4.4rem);
       letter-spacing: 0.18em;
       text-transform: uppercase;
-      color: transparent;
-      background: linear-gradient(120deg, var(--accent), var(--accent-2), var(--accent-3));
-      background-size: 200% 200%;
-      -webkit-background-clip: text;
-      background-clip: text;
+      color: #1a1a1a;
       position: relative;
       padding: 8px 18px;
-      filter: drop-shadow(0 6px 20px rgba(102, 227, 255, 0.25));
-      animation: gradientSweep 6s ease-in-out infinite, floatText 3.4s ease-in-out infinite;
+      text-shadow: 0 0 30px rgba(80, 80, 80, 0.5);
+      animation: floatText 3.4s ease-in-out infinite;
     }
 
     .brand-title::after {
@@ -87,24 +78,22 @@
       position: absolute;
       inset: 0;
       color: transparent;
-      -webkit-text-stroke: 1px rgba(229, 231, 235, 0.18);
-      text-shadow: 0 0 18px rgba(159, 123, 255, 0.25);
-      filter: blur(0.1px);
+      -webkit-text-stroke: 1px rgba(100, 100, 100, 0.3);
       animation: pulseStroke 2.8s ease-in-out infinite;
       pointer-events: none;
     }
 
     .brand-line {
       width: min(320px, 70%);
-      height: 2px;
-      background: linear-gradient(90deg, transparent, rgba(102, 227, 255, 0.6), rgba(159, 123, 255, 0.6), transparent);
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(80, 80, 80, 0.5), transparent);
       border-radius: 999px;
       animation: lineScan 4s ease-in-out infinite;
     }
 
     .brand-subtitle {
       font-size: 0.95rem;
-      color: rgba(148, 163, 184, 0.85);
+      color: #555555;
       letter-spacing: 0.14em;
       text-transform: uppercase;
       font-weight: 600;
@@ -119,30 +108,24 @@
       }
     }
 
-    @keyframes gradientSweep {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-
     @keyframes floatText {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-8px); }
     }
 
     @keyframes pulseStroke {
-      0%, 100% { opacity: 0.65; }
-      50% { opacity: 1; }
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.6; }
     }
 
     @keyframes lineScan {
-      0%, 100% { transform: scaleX(0.8); opacity: 0.5; }
-      50% { transform: scaleX(1); opacity: 1; }
+      0%, 100% { transform: scaleX(0.8); opacity: 0.3; }
+      50% { transform: scaleX(1); opacity: 0.6; }
     }
 
     @keyframes glowShift {
-      0%, 100% { transform: translateY(0) scale(1); opacity: 0.7; }
-      50% { transform: translateY(-18px) scale(1.05); opacity: 1; }
+      0%, 100% { transform: translateY(0) scale(1); opacity: 0.5; }
+      50% { transform: translateY(-18px) scale(1.05); opacity: 0.7; }
     }
 
     .media-wrap {
@@ -233,6 +216,26 @@
       background: #38bdf8;
       color: #082033;
     }
+
+    .doc-wrap {
+      width: 100%;
+      height: calc(100vh - 64px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding: 20px;
+      scroll-behavior: smooth;
+    }
+
+    .doc-page {
+      width: min(94vw, 1200px);
+      background: #fff;
+      border-radius: 4px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -258,6 +261,9 @@
     let activeVideoEl = null;
     let bgmEl = null;
     let mediaUnlockRequired = false;
+    const isHostPreview = new URLSearchParams(location.search).get("hostPreview") === "1";
+    let hostPreviewLocalScroll = false;
+    let hostPreviewScrollTimer = null;
     const POLL_MS = 350;
 
     function setStatus(text) {
@@ -306,12 +312,8 @@
     }
 
     function retryMediaPlaybackAfterUnlock() {
-      if (activeVideoEl) {
-        tryPlay(activeVideoEl);
-      }
-      if (bgmEl) {
-        tryPlay(bgmEl);
-      }
+      if (activeVideoEl) tryPlay(activeVideoEl);
+      if (bgmEl) tryPlay(bgmEl);
     }
 
     function renderEmpty() {
@@ -320,7 +322,7 @@
           <div class="brand-stage" aria-hidden="true">
             <div class="brand-title">Q Slıde</div>
             <div class="brand-line"></div>
-            <div class="brand-subtitle">Viewer ready</div>
+            <div class="brand-subtitle">Vıewer ready</div>
           </div>
         </div>
       `;
@@ -428,6 +430,67 @@
       stageEl.appendChild(wrap);
     }
 
+    function renderPdfDoc(media) {
+      if (!media) return renderEmpty();
+      const viewKey = `pdf:${media.id}`;
+      if (lastViewKey === viewKey) return;
+      lastViewKey = viewKey;
+      activeVideoEl = null;
+
+      const wrap = document.createElement("div");
+      wrap.className = "doc-wrap";
+      wrap.id = "pdfDocView";
+      if (isHostPreview) {
+        wrap.addEventListener("scroll", onHostPreviewPdfScroll, { passive: true });
+      }
+
+      const pages = media.pages || [media.url];
+      let loadedCount = 0;
+      const totalPages = pages.length;
+
+      for (const pageUrl of pages) {
+        const img = document.createElement("img");
+        img.className = "doc-page";
+        img.src = pageUrl;
+        img.loading = "lazy";
+        img.onload = () => {
+          loadedCount++;
+          if (loadedCount === totalPages && lastState && typeof lastState.scroll_pct === "number") {
+             applyScrollPct(lastState.scroll_pct);
+          }
+        };
+        wrap.appendChild(img);
+      }
+
+      stageEl.innerHTML = "";
+      stageEl.appendChild(wrap);
+    }
+
+    async function sendHostPreviewScroll(pct) {
+      try {
+        await fetch("/api/scroll/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pct }),
+        });
+      } catch (_) {}
+    }
+
+    function onHostPreviewPdfScroll(event) {
+      if (!isHostPreview) return;
+      const el = event.target;
+      const total = el.scrollHeight - el.clientHeight;
+      if (total <= 0) return;
+      const pct = el.scrollTop / total;
+      if (!Number.isFinite(pct)) return;
+      hostPreviewLocalScroll = true;
+      clearTimeout(hostPreviewScrollTimer);
+      hostPreviewScrollTimer = setTimeout(() => {
+        hostPreviewLocalScroll = false;
+      }, 400);
+      sendHostPreviewScroll(pct);
+    }
+
     function ensureBgmElement(bgmMedia) {
       if (!bgmMedia) return null;
       const targetTag = bgmMedia.type === "video" ? "video" : "audio";
@@ -459,6 +522,9 @@
       if (control.action === "restart") {
         seekByLag(activeVideoEl, lag);
         tryPlay(activeVideoEl);
+      }
+      if (control.action === "seek" && typeof control.time === "number") {
+        activeVideoEl.currentTime = control.time;
       }
     }
 
@@ -495,19 +561,41 @@
         seekByLag(el, lag);
         tryPlay(el);
       }
+      if (control.action === "seek" && typeof control.time === "number") {
+        el.currentTime = control.time;
+      }
       if (control.action === "volume" && typeof control.volume === "number") {
         el.volume = Math.max(0, Math.min(1, control.volume));
       }
     }
 
+    let lastState = null;
     function applyState(state) {
+      lastState = state;
       if (state.current_ppt_slide) {
         renderPptSlide(state.current_ppt_slide);
+      } else if (state.current_media && state.current_media.type === "pdf") {
+        renderPdfDoc(state.current_media);
+        if (typeof state.scroll_pct === "number") {
+          applyScrollPct(state.scroll_pct);
+        }
       } else {
         renderMedia(state.current_media || null);
       }
       applyVideoControl(state.video_control || null);
       applyBgmControl(state);
+    }
+
+    function applyScrollPct(pct) {
+      const docView = document.getElementById("pdfDocView");
+      if (!docView) return;
+      if (isHostPreview && hostPreviewLocalScroll) return;
+      const target = pct * (docView.scrollHeight - docView.clientHeight);
+      if (Math.abs(docView.scrollTop - target) > 10) {
+        docView.style.scrollBehavior = "auto";
+        docView.scrollTop = target;
+        docView.style.scrollBehavior = "smooth";
+      }
     }
 
     async function fetchState() {
@@ -565,6 +653,36 @@
         startPolling();
       };
     }
+
+    async function syncPlaybackTimes() {
+      if (activeVideoEl) {
+        try {
+          await fetch("/api/video/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              pos: activeVideoEl.currentTime || 0,
+              dur: activeVideoEl.duration || 0
+            })
+          });
+        } catch (_) {}
+      }
+      if (bgmEl) {
+        try {
+          await fetch("/api/bgm/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              pos: bgmEl.currentTime || 0,
+              dur: bgmEl.duration || 0
+            })
+          });
+        } catch (_) {}
+      }
+    }
+
+    const SYNC_INTERVAL_MS = 1000;
+    setInterval(syncPlaybackTimes, SYNC_INTERVAL_MS);
 
     renderEmpty();
     unlockBtn.addEventListener("click", () => {

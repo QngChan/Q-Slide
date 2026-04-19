@@ -1,11 +1,15 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import time
+import math
 import os
 import shutil
 import subprocess
-import pythoncom
+try:
+    import pythoncom
+except ImportError:
+    pythoncom = None  # Linux/macOS — COM functions won't be used
 import threading
 import uuid
 from pathlib import Path
@@ -15,8 +19,9 @@ from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconn
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-WEB_DIR = Path(__file__).resolve().parent / "web"
-MEDIA_DIR = Path(__file__).resolve().parent / "media_uploads"
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+WEB_DIR = ROOT_DIR / "web"
+MEDIA_DIR = ROOT_DIR / "data" / "media_uploads"
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
 PPT_SOURCE_DIR = MEDIA_DIR / "ppt_sources"
 PPT_SOURCE_DIR.mkdir(parents=True, exist_ok=True)
@@ -24,7 +29,7 @@ PPT_SOURCE_DIR.mkdir(parents=True, exist_ok=True)
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"}
 ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".webm", ".mov", ".m4v", ".avi"}
 ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".m4a", ".aac", ".flac"}
-ALLOWED_PPT_EXTENSIONS = {".pptx", ".docx", ".xlsx", ".xls"}
+ALLOWED_PPT_EXTENSIONS = {".pptx", ".docx", ".xlsx", ".xls", ".pdf"}
 
 
 def media_kind_from_suffix(suffix: str) -> str | None:
@@ -35,6 +40,8 @@ def media_kind_from_suffix(suffix: str) -> str | None:
         return "video"
     if lowered in ALLOWED_AUDIO_EXTENSIONS:
         return "audio"
+    if lowered == ".pdf":
+        return "pdf"
     return None
 
 
@@ -201,18 +208,52 @@ def download_and_install_libreoffice():
         _installing_libreoffice = False
 
 
+def _render_pdf_to_slides(pdf_path: Path, prefix: str = "pdf") -> list[dict[str, Any]]:
+    """Shared helper: renders each page of a PDF as a 1920px-wide PNG slide."""
+    try:
+        import fitz  # PyMuPDF
+    except ImportError:
+        raise RuntimeError("pymupdf not installed.")
+
+    slides: list[dict[str, Any]] = []
+    doc = fitz.open(str(pdf_path))
+    try:
+        target_width = 1920
+        for i, page in enumerate(doc):
+            rect = page.rect
+            zoom = target_width / rect.width
+            mat = fitz.Matrix(zoom, zoom)
+            pix = page.get_pixmap(matrix=mat, alpha=False, colorspace=fitz.csRGB)
+
+            image_name = f"{prefix}_{uuid.uuid4().hex}.png"
+            image_path = MEDIA_DIR / image_name
+            pix.save(str(image_path.resolve()))
+
+            slides.append({
+                "index": i,
+                "width": target_width,
+                "height": int(rect.height * zoom),
+                "background": "#ffffff",
+                "elements": [{
+                    "type": "image",
+                    "left": 0,
+                    "top": 0,
+                    "width": target_width,
+                    "height": int(rect.height * zoom),
+                    "src": f"/media/{image_name}"
+                }]
+            })
+    finally:
+        doc.close()
+    return slides
+
+
 def extract_slides_via_libreoffice(source_file: Path) -> list[dict[str, Any]]:
     """Uses LibreOffice to convert PPTX/DOCX to PDF, then PyMuPDF to PNG."""
     lo_path = get_libreoffice_path()
     if not lo_path:
         raise RuntimeError("LibreOffice not found.")
 
-    try:
-        import fitz  # PyMuPDF
-    except ImportError:
-        raise RuntimeError("pymupdf not installed.")
-
-    # 1. Convert to PDF
     temp_dir = PPT_SOURCE_DIR / f"tmp_{uuid.uuid4().hex}"
     temp_dir.mkdir(parents=True, exist_ok=True)
     try:
@@ -226,40 +267,7 @@ def extract_slides_via_libreoffice(source_file: Path) -> list[dict[str, Any]]:
         if not pdf_file:
             raise RuntimeError("LibreOffice PDF conversion failed.")
 
-        # 2. Render PDF pages as PNGs
-        slides: list[dict[str, Any]] = []
-        doc = fitz.open(str(pdf_file))
-        try:
-            target_width = 1920
-            for i, page in enumerate(doc):
-                # Calculate zoom for target width
-                rect = page.rect
-                zoom = target_width / rect.width
-                mat = fitz.Matrix(zoom, zoom)
-                pix = page.get_pixmap(matrix=mat, alpha=False, colorspace=fitz.csRGB)
-
-                image_name = f"lo_{uuid.uuid4().hex}.png"
-                image_path = MEDIA_DIR / image_name
-                pix.save(str(image_path.resolve()))
-
-                slides.append({
-                    "index": i,
-                    "width": target_width,
-                    "height": int(rect.height * zoom),
-                    "background": "#ffffff",
-                    "elements": [{
-                        "type": "image",
-                        "left": 0,
-                        "top": 0,
-                        "width": target_width,
-                        "height": int(rect.height * zoom),
-                        "src": f"/media/{image_name}"
-                    }]
-                })
-        finally:
-            doc.close()
-
-        return slides
+        return _render_pdf_to_slides(pdf_file, "lo")
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -322,6 +330,128 @@ def extract_pptx_slides_as_images(source_file: Path) -> list[dict[str, Any]]:
         pythoncom.CoUninitialize()
 
 
+def extract_docx_via_microsoft_word(source_file: Path) -> list[dict[str, Any]]:
+    """Uses Microsoft Word COM to convert DOCX to PDF, then PyMuPDF to PNG."""
+    try:
+        import win32com.client
+    except ImportError:
+        raise RuntimeError("pywin32 not installed")
+
+    pythoncom.CoInitialize()
+
+    word_app = None
+    doc = None
+    temp_dir = PPT_SOURCE_DIR / f"tmp_{uuid.uuid4().hex}"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        word_app = win32com.client.DispatchEx("Word.Application")
+        word_app.Visible = False
+        word_app.DisplayAlerts = False
+
+        doc = word_app.Documents.Open(str(source_file.resolve()), ReadOnly=True)
+        pdf_path = temp_dir / f"{source_file.stem}.pdf"
+        # wdFormatPDF = 17
+        doc.SaveAs2(str(pdf_path.resolve()), FileFormat=17)
+        doc.Close(False)
+        doc = None
+
+        return _render_pdf_to_slides(pdf_path, "word")
+    finally:
+        if doc:
+            try:
+                doc.Close(False)
+            except Exception:
+                pass
+        if word_app:
+            try:
+                word_app.Quit()
+            except Exception:
+                pass
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        pythoncom.CoUninitialize()
+
+
+def extract_xlsx_via_microsoft_excel(source_file: Path) -> list[dict[str, Any]]:
+    """Uses Microsoft Excel COM to convert XLSX/XLS to PDF, then PyMuPDF to PNG."""
+    try:
+        import win32com.client
+    except ImportError:
+        raise RuntimeError("pywin32 not installed")
+
+    pythoncom.CoInitialize()
+
+    excel_app = None
+    workbook = None
+    temp_dir = PPT_SOURCE_DIR / f"tmp_{uuid.uuid4().hex}"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        excel_app = win32com.client.DispatchEx("Excel.Application")
+        excel_app.Visible = False
+        excel_app.DisplayAlerts = False
+
+        workbook = excel_app.Workbooks.Open(str(source_file.resolve()), ReadOnly=True)
+        pdf_path = temp_dir / f"{source_file.stem}.pdf"
+        # xlTypePDF = 0
+        workbook.ExportAsFixedFormat(0, str(pdf_path.resolve()))
+        workbook.Close(False)
+        workbook = None
+
+        return _render_pdf_to_slides(pdf_path, "excel")
+    finally:
+        if workbook:
+            try:
+                workbook.Close(False)
+            except Exception:
+                pass
+        if excel_app:
+            try:
+                excel_app.Quit()
+            except Exception:
+                pass
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        pythoncom.CoUninitialize()
+
+
+def _build_fallback_error_detail(suffix: str, errors: list[str]) -> str:
+    """Builds a detailed Turkish user guidance message when all conversion methods fail."""
+    format_names = {
+        ".pptx": "PowerPoint (PPTX)",
+        ".docx": "Word (DOCX)",
+        ".xlsx": "Excel (XLSX)",
+        ".xls": "Excel (XLS)",
+    }
+    fmt = format_names.get(suffix, suffix.upper())
+    ms_app = {
+        ".pptx": "Microsoft PowerPoint",
+        ".docx": "Microsoft Word",
+        ".xlsx": "Microsoft Excel",
+        ".xls": "Microsoft Excel",
+    }.get(suffix, "Microsoft Office")
+
+    lines = [
+        f"{fmt} dosyası açılamadı. Tüm dönüştürme yöntemleri başarısız oldu.",
+        "",
+        "Denenen yöntemler ve hatalar:",
+    ]
+    for i, err in enumerate(errors, 1):
+        lines.append(f"  {i}. {err}")
+
+    lines += [
+        "",
+        "Çözüm adımları:",
+        f"  1) {ms_app} yüklüyse düzgün çalıştığından emin olun.",
+        f"     Başlat menüsünden {ms_app} uygulamasını manuel açıp kapatmayı deneyin.",
+        "  2) LibreOffice'i kurmak için Host panelindeki 'LibreOffice Kur' butonunu kullanın.",
+        "     İndirme adresi: https://www.libreoffice.org/download",
+        "  3) Dosyanın bozuk olmadığından emin olun —",
+        f"     {ms_app} ile dosyayı manuel açıp kontrol edin.",
+        "  4) Antivirüs/güvenlik yazılımı COM erişimini engelliyor olabilir.",
+        "     Geçici olarak devre dışı bırakıp tekrar deneyin.",
+        "  5) Sorun devam ederse uygulamayı yeniden başlatın.",
+    ]
+    return "\n".join(lines)
+
+
 def extract_docx_slides(source_file: Path) -> list[dict[str, Any]]:
     try:
         from docx import Document  # type: ignore[import]
@@ -358,13 +488,6 @@ def extract_docx_slides(source_file: Path) -> list[dict[str, Any]]:
     for para in doc.paragraphs:
         text = para.text.strip()
         if not text:
-            # Check for images in paragraph
-            run_has_image = False
-            for run in para.runs:
-                if "Drawing" in run._element.xml or "graphic" in run._element.xml:
-                    # In python-docx, extracting images from inline shapes is tricky.
-                    # For simplicity, we'll focus on text for now, or use a simplified approach.
-                    pass
             continue
 
         # If it's a heading, start a new slide (unless it's the first one)
@@ -423,6 +546,11 @@ class ConferenceState:
         now_ms = int(time.time() * 1000)
         self._video_control: dict[str, Any] = {"seq": 0, "action": "none", "at_ms": now_ms}
         self._bgm_control: dict[str, Any] = {"seq": 0, "action": "none", "volume": self._bgm_volume, "at_ms": now_ms}
+        self._scroll_pct: float = 0.0
+        self._video_pos: float = 0.0
+        self._video_dur: float = 0.0
+        self._bgm_pos: float = 0.0
+        self._bgm_dur: float = 0.0
 
     async def get_state(self) -> dict[str, Any]:
         current = next((m for m in self._media_items if m["id"] == self._current_media_id), None)
@@ -443,6 +571,11 @@ class ConferenceState:
             "bgm_volume": self._bgm_volume,
             "video_control": dict(self._video_control),
             "bgm_control": dict(self._bgm_control),
+            "scroll_pct": self._scroll_pct,
+            "video_pos": self._video_pos,
+            "video_dur": self._video_dur,
+            "bgm_pos": self._bgm_pos,
+            "bgm_dur": self._bgm_dur,
             "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         }
 
@@ -452,6 +585,52 @@ class ConferenceState:
     async def add_media(self, item: dict[str, Any]) -> dict[str, Any]:
         self._media_items.append(item)
         return item
+
+    async def update_media_bucket(self, media_id: str, bucket: str) -> dict[str, Any]:
+        found = next((m for m in self._media_items if m["id"] == media_id), None)
+        if not found:
+            raise HTTPException(status_code=404, detail="Medya bulunamadı.")
+
+        normalized_bucket = (bucket or "").strip().lower()
+        if normalized_bucket not in {"presentation", "music"}:
+            raise HTTPException(status_code=400, detail="Geçersiz medya alanı.")
+
+        media_type = str(found.get("type") or "").strip().lower()
+        if normalized_bucket == "presentation" and media_type not in {"image", "video", "pdf"}:
+            raise HTTPException(status_code=400, detail="Bu medya sunum alanına taşınamaz.")
+        if normalized_bucket == "music" and media_type not in {"audio", "video"}:
+            raise HTTPException(status_code=400, detail="Bu medya müzik alanına taşınamaz.")
+
+        found["bucket"] = normalized_bucket
+        if normalized_bucket != "presentation" and self._current_media_id == media_id:
+            self._current_media_id = None
+        if normalized_bucket != "music" and self._bgm_media_id == media_id:
+            self._bgm_media_id = None
+
+        await self.broadcast_current()
+        return found
+
+    async def delete_media(self, media_id: str) -> dict[str, Any]:
+        index = next((i for i, m in enumerate(self._media_items) if m["id"] == media_id), None)
+        if index is None:
+            raise HTTPException(status_code=404, detail="Medya bulunamadı.")
+
+        removed = self._media_items.pop(index)
+        if self._current_media_id == media_id:
+            self._current_media_id = None
+        if self._bgm_media_id == media_id:
+            self._bgm_media_id = None
+
+        media_name = Path(str(removed.get("url") or "")).name
+        if media_name:
+            file_path = MEDIA_DIR / media_name
+            try:
+                file_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+
+        await self.broadcast_current()
+        return removed
 
     async def list_ppt_decks(self) -> dict[str, Any]:
         active = next((d for d in self._ppt_decks if d["id"] == self._active_ppt_id), None)
@@ -552,15 +731,17 @@ class ConferenceState:
         await self.emit_bgm_control("restart")
         return found
 
-    async def emit_video_control(self, action: str) -> None:
+    async def emit_video_control(self, action: str, time_seek: float | None = None) -> None:
         self._video_control = {
             "seq": int(self._video_control.get("seq", 0)) + 1,
             "action": action,
             "at_ms": int(time.time() * 1000),
         }
+        if time_seek is not None:
+            self._video_control["time"] = time_seek
         await self.broadcast_current()
 
-    async def emit_bgm_control(self, action: str, volume: float | None = None) -> None:
+    async def emit_bgm_control(self, action: str, volume: float | None = None, time_seek: float | None = None) -> None:
         if volume is not None:
             self._bgm_volume = max(0.0, min(1.0, float(volume)))
         self._bgm_control = {
@@ -569,7 +750,22 @@ class ConferenceState:
             "volume": self._bgm_volume,
             "at_ms": int(time.time() * 1000),
         }
+        if time_seek is not None:
+            self._bgm_control["time"] = time_seek
         await self.broadcast_current()
+
+    async def set_scroll_pct(self, pct: float) -> None:
+        self._scroll_pct = max(0.0, min(1.0, float(pct)))
+        await self.broadcast_current()
+
+    async def sync_video_time(self, pos: float, dur: float) -> None:
+        self._video_pos = float(pos)
+        self._video_dur = float(dur)
+        # We don't broadcast here to avoid flooding. Host will pick it up on polling or next state broadcast.
+
+    async def sync_bgm_time(self, pos: float, dur: float) -> None:
+        self._bgm_pos = float(pos)
+        self._bgm_dur = float(dur)
 
     async def register(self, websocket: WebSocket) -> None:
         await websocket.accept()
@@ -632,12 +828,12 @@ async def upload_media(request: Request, filename: str = "", bucket: str = "pres
     suffix = Path(original_name).suffix.lower()
     kind = media_kind_from_suffix(suffix)
     if not kind:
-        raise HTTPException(status_code=400, detail="Sadece resim/video/ ses dosyaları desteklenir.")
+        raise HTTPException(status_code=400, detail="Sadece resim/video/ses ve PDF dosyaları desteklenir.")
     normalized_bucket = (bucket or "presentation").strip().lower()
     if normalized_bucket not in {"presentation", "music"}:
-        raise HTTPException(status_code=400, detail="bucket must be 'presentation' or 'music'.")
-    if normalized_bucket == "presentation" and kind not in {"image", "video"}:
-        raise HTTPException(status_code=400, detail="Sunu bucket sadece resim/video kabul eder.")
+        raise HTTPException(status_code=400, detail="Müzik bucket sadece ses/video kabul eder.")
+    if normalized_bucket == "presentation" and kind not in {"image", "video", "pdf"}:
+        raise HTTPException(status_code=400, detail="Sunu bucket sadece resim/video/pdf kabul eder.")
     if normalized_bucket == "music" and kind not in {"audio", "video"}:
         raise HTTPException(status_code=400, detail="Müzik bucket sadece ses/video kabul eder.")
 
@@ -650,12 +846,26 @@ async def upload_media(request: Request, filename: str = "", bucket: str = "pres
 
     destination.write_bytes(raw)
 
+    pages = []
+    if kind == "pdf":
+        try:
+            slides = _render_pdf_to_slides(destination, "media_pdf")
+            # Extract only the img src URLs from slides to store in media item
+            pages = []
+            for s in slides:
+                if s.get("elements") and len(s["elements"]) > 0:
+                    pages.append(s["elements"][0]["src"])
+        except Exception as e:
+            print(f"PDF media render error: {e}")
+            # Fallback to empty pages, frontend will handle
+
     item = {
         "id": media_id,
         "name": original_name,
         "type": kind,
         "bucket": normalized_bucket,
         "url": f"/media/{safe_name}",
+        "pages": pages,
         "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
     }
     saved = await conference_state.add_media(item)
@@ -678,33 +888,75 @@ async def upload_ppt(request: Request, filename: str = "") -> JSONResponse:
     source_file.write_bytes(raw)
 
     slides: list[dict[str, Any]] = []
+    fallback_errors: list[str] = []
 
-    if suffix in {".pptx", ".docx", ".xlsx", ".xls"}:
-        # Strategy: 
-        # 1. Try LibreOffice (Best for PPTX/DOCX/XLSX high-fidelity)
-        # 2. Try Windows COM (PPTX only)
-        # 3. Manual Fallback
-        lo_path = get_libreoffice_path()
+    if suffix in {".pptx", ".docx", ".xlsx", ".xls", ".pdf"}:
+        # Strategy:
+        # 1. Handle PDF directly if suffix is .pdf
+        # 2. Try LibreOffice (Best for PPTX/DOCX/XLSX high-fidelity)
+        # 3. Try Microsoft Office COM (PowerPoint / Word / Excel)
+        # 4. python-pptx / python-docx text extraction (PPTX/DOCX only)
+        # 5. Detailed user guidance error
+
+        # --- 0. PDF Direct rendering ---
+        if suffix == ".pdf":
+            try:
+                slides = _render_pdf_to_slides(source_file, "direct")
+            except Exception as pdf_err:
+                fallback_errors.append(f"PDF Render: {pdf_err}")
+                print(f"PDF dönüşümü başarısız: {pdf_err}")
+
+        # --- 1. LibreOffice ---
+        lo_path = None
+        if not slides:
+            lo_path = get_libreoffice_path()
         if lo_path:
             try:
                 slides = extract_slides_via_libreoffice(source_file)
             except Exception as lo_err:
+                fallback_errors.append(f"LibreOffice: {lo_err}")
                 print(f"LibreOffice dönüşümü başarısız: {lo_err}")
-                # continue to next strategy
+        else:
+            fallback_errors.append("LibreOffice: Sistemde bulunamadı.")
 
-        if not slides and suffix == ".pptx":
-            try:
-                slides = extract_pptx_slides_as_images(source_file)
-            except Exception as com_err:
-                print(f"COM dönüşümü başarısız: {com_err}")
-
+        # --- 2. Microsoft Office COM ---
         if not slides:
             if suffix == ".pptx":
-                slides = extract_pptx_slides(source_file)
+                try:
+                    slides = extract_pptx_slides_as_images(source_file)
+                except Exception as com_err:
+                    fallback_errors.append(f"Microsoft PowerPoint COM: {com_err}")
+                    print(f"PowerPoint COM dönüşümü başarısız: {com_err}")
             elif suffix == ".docx":
-                slides = extract_docx_slides(source_file)
-            else:
-                raise HTTPException(status_code=500, detail="Excel dosyaları için LibreOffice gerekli.")
+                try:
+                    slides = extract_docx_via_microsoft_word(source_file)
+                except Exception as word_err:
+                    fallback_errors.append(f"Microsoft Word COM: {word_err}")
+                    print(f"Word COM dönüşümü başarısız: {word_err}")
+            elif suffix in {".xlsx", ".xls"}:
+                try:
+                    slides = extract_xlsx_via_microsoft_excel(source_file)
+                except Exception as excel_err:
+                    fallback_errors.append(f"Microsoft Excel COM: {excel_err}")
+                    print(f"Excel COM dönüşümü başarısız: {excel_err}")
+
+        # --- 3. python-pptx / python-docx text extraction ---
+        if not slides:
+            if suffix == ".pptx":
+                try:
+                    slides = extract_pptx_slides(source_file)
+                except Exception as pptx_err:
+                    fallback_errors.append(f"python-pptx: {pptx_err}")
+            elif suffix == ".docx":
+                try:
+                    slides = extract_docx_slides(source_file)
+                except Exception as docx_err:
+                    fallback_errors.append(f"python-docx: {docx_err}")
+
+        # --- 4. All methods failed → detailed user guidance ---
+        if not slides:
+            detail = _build_fallback_error_detail(suffix, fallback_errors)
+            raise HTTPException(status_code=500, detail=detail)
 
     deck = {
         "id": deck_id,
@@ -768,22 +1020,77 @@ async def set_bgm(payload: dict[str, Any]) -> JSONResponse:
     return JSONResponse(selected)
 
 
+@app.post("/api/media/move")
+async def move_media(payload: dict[str, Any]) -> JSONResponse:
+    media_id = str(payload.get("media_id") or "").strip()
+    bucket = str(payload.get("bucket") or "").strip().lower()
+    if not media_id:
+        raise HTTPException(status_code=400, detail="media_id gerekli.")
+    if not bucket:
+        raise HTTPException(status_code=400, detail="bucket gerekli.")
+    moved = await conference_state.update_media_bucket(media_id, bucket)
+    return JSONResponse(moved)
+
+
+@app.post("/api/media/delete")
+async def remove_media(payload: dict[str, Any]) -> JSONResponse:
+    media_id = str(payload.get("media_id") or "").strip()
+    if not media_id:
+        raise HTTPException(status_code=400, detail="media_id gerekli.")
+    removed = await conference_state.delete_media(media_id)
+    return JSONResponse({"status": "ok", "removed": removed})
+
+
 @app.post("/api/bgm/control")
 async def control_bgm(payload: dict[str, Any]) -> JSONResponse:
     action = str(payload.get("action") or "").strip().lower()
-    if action not in {"play", "pause", "stop", "restart", "volume"}:
+    if action not in {"play", "pause", "stop", "restart", "volume", "seek"}:
         raise HTTPException(status_code=400, detail="Desteklenmeyen bgm eylemi.")
     volume = payload.get("volume", None)
-    await conference_state.emit_bgm_control(action, volume=volume)
+    time_seek = payload.get("time", None)
+    await conference_state.emit_bgm_control(action, volume=volume, time_seek=time_seek)
     return JSONResponse({"status": "ok"})
 
 
 @app.post("/api/video/control")
 async def control_video(payload: dict[str, Any]) -> JSONResponse:
     action = str(payload.get("action") or "").strip().lower()
-    if action not in {"play", "pause", "restart"}:
+    if action not in {"play", "pause", "restart", "seek"}:
         raise HTTPException(status_code=400, detail="Desteklenmeyen video eylemi.")
-    await conference_state.emit_video_control(action)
+    time_seek = payload.get("time", None)
+    await conference_state.emit_video_control(action, time_seek=time_seek)
+    return JSONResponse({"status": "ok"})
+
+
+@app.post("/api/video/sync")
+async def sync_video(payload: dict[str, Any]) -> JSONResponse:
+    pos = float(payload.get("pos", 0))
+    dur = float(payload.get("dur", 0))
+    await conference_state.sync_video_time(pos, dur)
+    return JSONResponse({"status": "ok"})
+
+
+@app.post("/api/bgm/sync")
+async def sync_bgm(payload: dict[str, Any]) -> JSONResponse:
+    pos = float(payload.get("pos", 0))
+    dur = float(payload.get("dur", 0))
+    await conference_state.sync_bgm_time(pos, dur)
+    return JSONResponse({"status": "ok"})
+
+
+@app.post("/api/scroll/sync")
+async def sync_scroll(payload: dict[str, Any]) -> JSONResponse:
+    raw_pct = payload.get("pct")
+    if raw_pct is None:
+        return JSONResponse({"status": "error", "message": "Missing pct"}, status_code=400)
+    try:
+        pct = float(raw_pct)
+        if math.isnan(pct) or math.isinf(pct):
+             return JSONResponse({"status": "error", "message": "Invalid pct value"}, status_code=400)
+        print(f"Scroll sync: {pct:.2%}")
+        await conference_state.set_scroll_pct(pct)
+    except (ValueError, TypeError):
+        return JSONResponse({"status": "error", "message": "Non-numeric pct"}, status_code=400)
     return JSONResponse({"status": "ok"})
 
 
@@ -815,6 +1122,35 @@ async def install_libreoffice() -> JSONResponse:
 
     threading.Thread(target=download_and_install_libreoffice, daemon=True).start()
     return JSONResponse({"status": "started"})
+
+
+try:
+    from src.app.host import register_host_alive, unregister_host_alive
+except ImportError:
+    try:
+        from .host import register_host_alive, unregister_host_alive
+    except ImportError:
+        def register_host_alive(client_id: str) -> None:
+            pass
+        def unregister_host_alive(client_id: str) -> None:
+            pass
+
+
+@app.post("/api/host/alive")
+async def host_alive(payload: dict[str, Any]) -> JSONResponse:
+    client_id = str(payload.get("client_id") or "").strip()
+    if not client_id:
+        raise HTTPException(status_code=400, detail="client_id gerekli.")
+    register_host_alive(client_id)
+    return JSONResponse({"status": "ok"})
+
+
+@app.post("/api/host/bye")
+async def host_bye(payload: dict[str, Any]) -> JSONResponse:
+    client_id = str(payload.get("client_id") or "").strip()
+    if client_id:
+        unregister_host_alive(client_id)
+    return JSONResponse({"status": "ok"})
 
 
 @app.websocket("/ws")
